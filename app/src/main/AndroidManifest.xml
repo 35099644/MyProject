@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.tensynchina.hook">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:name=".MyApplication"
+        >
+        <service android:name=".task.TaskService" android:process=":task" android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.tensynchina.Task"/>
+            </intent-filter>
+        </service>
+        <service android:name=".push.MessageService" android:process=":remote" android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.tensynchina.Message"/>
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="hook wechat" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="53" />
+    </application>
+</manifest>

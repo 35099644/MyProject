@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="reboot" type="id"/>
+    <item name="soft_reboot" type="id" />
+    <item name="reboot_recovery" type="id" />
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="port">29999</string>
+    <string name="reboot">Reboot</string>
+    <string name="soft_reboot">Soft reboot</string>
+    <string name="reboot_recovery">Reboot to recovery</string>
+</resources>
