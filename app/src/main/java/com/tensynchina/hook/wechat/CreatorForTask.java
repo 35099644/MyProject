@@ -8,7 +8,7 @@ import com.tensynchina.hook.utils.XLogger;
  * Created by llx on 2018/3/16.
  */
 
-class TaskCreator {
+class CreatorForTask {
 
     static BaseTask create(int taskTag) {
         String task1ClassName = "com.tensynchina.hook.wechat.Task" + taskTag;

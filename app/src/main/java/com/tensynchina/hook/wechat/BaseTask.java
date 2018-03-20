@@ -1,5 +1,6 @@
 package com.tensynchina.hook.wechat;
 
+import com.llx278.uimocker2.ISolo;
 import com.llx278.uimocker2.Solo;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
@@ -10,5 +11,5 @@ import com.tensynchina.hook.task.Result;
  */
 
 public abstract class BaseTask {
-    public abstract Result execute(Solo solo, Param param);
+    public abstract Result execute(ISolo solo, Param param);
 }

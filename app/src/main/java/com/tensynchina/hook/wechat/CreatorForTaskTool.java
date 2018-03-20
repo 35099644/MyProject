@@ -6,7 +6,7 @@ import com.orhanobut.logger.Logger;
  * Created by llx on 2018/3/19.
  */
 
-public class TaskToolCreator {
+public class CreatorForTaskTool {
 
     static BaseTask create(int taskTag) {
 

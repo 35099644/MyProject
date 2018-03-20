@@ -93,8 +93,9 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
         }
     }
 
-    private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"南方日报\\\"]}\"}}";
-
+    private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"丁香园\\\"]}\"}}";
+    private static final String tag2 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":2,\"taskId\":\"123\",\"json\":\"{\\\"keyDes\\\":\\\"飞思卡尔\\\",\\\"time\\\":1500652800}\"}}";
+    private static final String tag3 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":3,\"taskId\":\"1500652800\",\"json\":\"{\\\"keyDes\\\":\\\"丁香园\\\",\\\"time\\\":1512000000}\"}}";
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -109,6 +110,22 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
                         }
                     }.start();
 
+                    break;
+                case "2":
+                    new Thread(){
+                        @Override
+                        public void run() {
+                            publishMessage("2001",tag2);
+                        }
+                    }.start();
+                    break;
+                case "3":
+                    new Thread(){
+                        @Override
+                        public void run() {
+                            publishMessage("2001",tag3);
+                        }
+                    }.start();
                     break;
                 default:
             }

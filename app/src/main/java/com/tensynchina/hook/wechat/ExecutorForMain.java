@@ -2,10 +2,10 @@ package com.tensynchina.hook.wechat;
 
 import android.content.Context;
 
-import com.llx278.exeventbus.ELogger;
 import com.llx278.exeventbus.Subscriber;
 import com.llx278.exeventbus.ThreadModel;
 import com.llx278.exeventbus.Type;
+import com.llx278.uimocker2.ISolo;
 import com.llx278.uimocker2.Solo;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
@@ -18,10 +18,10 @@ import com.tensynchina.hook.utils.XLogger;
 
 public class ExecutorForMain {
 
-    private Solo mSolo;
+    private ISolo mSolo;
 
     public ExecutorForMain(Context context) {
-        mSolo = Solo.getInstance(context);
+        mSolo = new Solo(context);
     }
 
     /**
@@ -33,9 +33,9 @@ public class ExecutorForMain {
             model = ThreadModel.POOL)
     public Result executeTask(Param param) {
         XLogger.d("微信收到了一个任务 : " + param.toString());
-        BaseTask task = TaskCreator.create(param.getTaskTag());
+        BaseTask task = CreatorForTask.create(param.getTaskTag());
         if (task != null) {
-            XLogger.d("准备执行task");
+            XLogger.d("准备执行task : " + task.getClass().getName());
             return task.execute(mSolo,param);
         }
         return null;

@@ -6,14 +6,13 @@ import android.widget.EditText;
 import com.alibaba.fastjson.JSON;
 import com.llx278.uimocker2.By;
 import com.llx278.uimocker2.Filter;
-import com.llx278.uimocker2.Solo;
+import com.llx278.uimocker2.ISolo;
 import com.llx278.uimocker2.WebElement;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -22,12 +21,13 @@ import java.util.List;
 
 public class TaskTool1 extends BaseTask {
 
-
     @Override
-    public Result execute(final Solo solo, final Param param) {
-        WeChatTask1 wtt1 = JSON.parseObject(param.getJson(),WeChatTask1.class);
-        final String name = wtt1.getKeyDes().get(0);
+    public Result execute(ISolo soloArg, final Param param) {
+
         try {
+            final  ISolo solo = new SoloForTaskTool(soloArg);
+            WeChatTask1 wtt1 = JSON.parseObject(param.getJson(),WeChatTask1.class);
+            final String name = wtt1.getKeyDes().get(0);
             final EditText editText = solo.getWaiter().waitForEditTextAppearAndGet("^搜索公众号$",1000 * 20);
             solo.runOnMainSync(new Runnable() {
                 @Override

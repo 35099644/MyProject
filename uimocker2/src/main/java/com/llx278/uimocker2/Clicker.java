@@ -98,19 +98,10 @@ public class Clicker {
      * @return true 点击成功 false 点击失败
      */
     public boolean clickOnView(View target) {
-
-        if (target == null) {
-            throw new IllegalArgumentException("target is null!");
-        }
-
         return clickOnScreen(target,false,0);
     }
 
     public boolean longClickOnView(View target,long time) {
-        if (target == null) {
-            throw new IllegalArgumentException("target is null!");
-        }
-
         return clickOnScreen(target,true,time);
     }
 
@@ -159,6 +150,10 @@ public class Clicker {
      */
 
     private boolean clickOnScreen(View view, boolean longClick, long time) {
+
+        if (view == null) {
+            return false;
+        }
 
         float[] xyToClick = getClickCoordinates(view);
         float x = xyToClick[0];

@@ -2,7 +2,6 @@ package com.llx278.uimocker2;
 
 import android.app.Activity;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -18,10 +17,13 @@ import java.util.List;
 
 public class Waiter {
 
-    public static final long DEFAULT_WAIT_TIMEOUT = 1000 * 20;
-    public static long WAIT_TIMEOUT = DEFAULT_WAIT_TIMEOUT;
+    private static final long DEFAULT_WAIT_TIMEOUT = 1000 * 20;
     public static final long DEFAULT_PAUSE_TIMEOUT = 200;
-    public static long PAUSE_TIME_OUT = DEFAULT_PAUSE_TIMEOUT;
+    /**
+     * 等待循环中每一次循环的暂停时间默认是{@link Waiter#DEFAULT_PAUSE_TIMEOUT},
+     * 可以修改此值来改变暂停时间
+     */
+    public static long sPauseTimeOut = DEFAULT_PAUSE_TIMEOUT;
 
     private static final String TAG = "Waiter";
     private final ActivityUtils mActivityUtils;
@@ -42,7 +44,7 @@ public class Waiter {
 
     private void pause() {
         try {
-            Thread.sleep(DEFAULT_PAUSE_TIMEOUT);
+            Thread.sleep(sPauseTimeOut);
         } catch (InterruptedException ignore) {
         }
     }
@@ -54,7 +56,7 @@ public class Waiter {
      * @return true 指定的activity已经出现，false 超时返回
      */
     public boolean waitForActivity(String activityName) {
-        return waitForActivity(activityName, WAIT_TIMEOUT);
+        return waitForActivity(activityName, DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -86,7 +88,7 @@ public class Waiter {
      * @return true 指定的activity出现 false 超时返回
      */
     public boolean waitForActivity(Class<? extends Activity> activityClass) {
-        return waitForActivity(activityClass, WAIT_TIMEOUT);
+        return waitForActivity(activityClass, DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -131,7 +133,7 @@ public class Waiter {
      * @return
      */
     public boolean waitForWindowDecorViews() {
-        return waitForWindowDecorViews(WAIT_TIMEOUT);
+        return waitForWindowDecorViews(DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -166,6 +168,10 @@ public class Waiter {
         return waitForTextAppearAndGet(regex,timeout) != null;
     }
 
+    public View waitForTextAppearAndGet(String regex) {
+        return waitForTextAppearAndGet(regex,DEFAULT_WAIT_TIMEOUT);
+    }
+
     /**
      * 等待某个文本出现，此方法会强制遍历所有的view(不限于TextView)
      * @param regex 待匹配的文本
@@ -186,6 +192,10 @@ public class Waiter {
 
     public boolean waitForTextAppearWithVerticallyScroll(String regex,long timeout,View scrollableView) {
         return waitForTextAppearWithVerticallyScrollAndGet(regex,timeout,scrollableView) != null;
+    }
+
+    public View waitForTextAppearWithVerticallyScrollAndGet(String regex,View scrollableView) {
+        return waitForTextAppearWithVerticallyScrollAndGet(regex,DEFAULT_WAIT_TIMEOUT,scrollableView);
     }
 
     /**
@@ -229,7 +239,7 @@ public class Waiter {
      * @return true 符合条件的文本已经出现 false 超时
      */
     public boolean waitForTextViewAppear(String regex) {
-        return waitForTextViewAppear(regex, WAIT_TIMEOUT);
+        return waitForTextViewAppear(regex, DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -328,7 +338,7 @@ public class Waiter {
      * @return true 找到了匹配的edittext false 没找到
      */
     public boolean waitForEditTextAppear(String regex) {
-        return waitForEditTextAppear(regex, WAIT_TIMEOUT);
+        return waitForEditTextAppear(regex, DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -340,6 +350,10 @@ public class Waiter {
      */
     public boolean waitForEditTextAppear(String regex, long timeout) {
         return waitForEditTextAppearAndGet(regex,timeout) != null;
+    }
+
+    public EditText waitForEditTextAppearAndGet(String regex) {
+        return waitForEditTextAppearAndGet(regex,DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -495,6 +509,31 @@ public class Waiter {
      */
     public boolean waitForWebElementAppear(By by,View webView,long timeout) {
         return waitForWebElementAppearAndGet(by,webView,timeout) != null;
+    }
+
+    public <T extends View> boolean waitForViewListAppear(Class<T> aClass,boolean includeSubClass) {
+        return waitForViewListAppear(aClass,includeSubClass,DEFAULT_WAIT_TIMEOUT);
+    }
+
+    public <T extends View> boolean waitForViewListAppear(Class<T> aClass,boolean includeSubClass,long timeout) {
+        ArrayList<T> viewListByClass = waitForViewListAppearAndGet(aClass,includeSubClass,timeout);
+        return viewListByClass != null && !viewListByClass.isEmpty();
+    }
+
+    public <T extends View> ArrayList<T> waitForViewListAppearAndGet(Class<T> aClass,boolean includeSubClass){
+        return waitForViewListAppearAndGet(aClass,includeSubClass,DEFAULT_WAIT_TIMEOUT);
+    }
+
+    public <T extends View> ArrayList<T> waitForViewListAppearAndGet(Class<T> aClass,boolean includeSubClass,long timeout) {
+        long endTime = SystemClock.uptimeMillis() + timeout;
+        while (SystemClock.uptimeMillis() < endTime) {
+            pause();
+            ArrayList<T> viewListByClass = mViewGetter.getViewListByClass(aClass, includeSubClass, null, true);
+            if (viewListByClass != null && !viewListByClass.isEmpty()) {
+                return viewListByClass;
+            }
+        }
+        return null;
     }
 
     private boolean isActivityMatching(Activity currentActivity, String activityName) {

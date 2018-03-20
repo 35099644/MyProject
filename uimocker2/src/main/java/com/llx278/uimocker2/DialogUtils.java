@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * 
  */
 
-class DialogUtils {
+public class DialogUtils {
 
 	private final InstrumentationDecorator instrumentation;
 	private final ActivityUtils activityUtils;
@@ -34,7 +34,7 @@ class DialogUtils {
 	 * @param viewGetter the {@code ViewGetter} instance
 	 */
 
-	public DialogUtils(InstrumentationDecorator instrumentation, ActivityUtils activityUtils, ViewGetter viewGetter) {
+	DialogUtils(InstrumentationDecorator instrumentation, ActivityUtils activityUtils, ViewGetter viewGetter) {
 		this.instrumentation = instrumentation;
 		this.activityUtils = activityUtils;
 		this.viewGetter = viewGetter;

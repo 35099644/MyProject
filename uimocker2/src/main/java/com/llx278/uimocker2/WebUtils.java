@@ -246,8 +246,6 @@ public class WebUtils {
 		else if(by instanceof By.TagName){
 			return executeJavaScriptFunction("tagName(\""+by.getValue()+"\", \"" + String.valueOf(shouldClick) + "\");",webView,frame);
 		} else if (by instanceof By.Attribute) {
-			XposedBridge.log("准备执行 : attribute");
-			XposedBridge.log("value : " + "attribute(\""+by.getValue()+"\", \"" + String.valueOf(shouldClick) + "\");");
 			return executeJavaScriptFunction("attribute(\""+by.getValue()+"\", \"" + String.valueOf(shouldClick) + "\");",webView,frame);
 		}
 		return false;

@@ -66,7 +66,7 @@ class WebViewInjector {
                 //new WebChromeHookedCallback());
                 return true;
             } else if (ReflectUtil.isAssignedFrom("com.tencent.smtt.sdk.WebView", webView)) {
-
+                // 直接hook有一个巨坑，就是如果继承WebChromeClient的类并没有调用super，那就悲剧了
                 mCurrentHookedMethod = XposedHelpers.findAndHookMethod(
                         "com.tencent.smtt.sdk.WebChromeClient",
                         webView.getClass().getClassLoader(),
@@ -86,7 +86,7 @@ class WebViewInjector {
         return false;
     }
 
-    void unInject(View webView) {
+    void unInject(final View webView) {
         Object currentWebView = webView;
         try {
             currentWebView = new Reflect(currentWebView).field("mProvider").out();
@@ -94,7 +94,16 @@ class WebViewInjector {
             WebChromeClient client = (WebChromeClient)
                     new Reflect(mClientAdapter).field("mWebChromeClient").out();
             if (client.equals(mInjectedClient)) {
-                ((WebView) webView).setWebChromeClient(mInjectedClient.mOriginalWebChromeClient);
+                mInst.runOnMainSync(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            ((WebView) webView).setWebChromeClient(mInjectedClient.mOriginalWebChromeClient);
+                        } catch (Exception e) {
+                            MLogger.e(e);
+                        }
+                    }
+                });
             }
         } catch (Exception e) {
             MLogger.e(e);
@@ -114,7 +123,6 @@ class WebViewInjector {
      * @return true 此结果可以被处理，false，此结果不能被处理
      */
     private boolean handleMessage(View webView, String message) {
-
         if (!TextUtils.isEmpty(message) && message.startsWith("inject_result")) {
             String tag = message.substring(14, 18);
             String msg = message.substring(19);
@@ -190,6 +198,14 @@ class WebViewInjector {
                 }
                 return true;
             }
+        }
+
+        @Override
+        public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+            if (mOriginalWebChromeClient != null) {
+                return mOriginalWebChromeClient.onJsAlert(view, url, message, result);
+            }
+            return true;
         }
 
         @Override
@@ -272,16 +288,6 @@ class WebViewInjector {
             if (mOriginalWebChromeClient != null) {
                 mOriginalWebChromeClient.onHideCustomView();
             }
-        }
-
-        @Override
-        public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-            XposedBridge.log("message : " + message);
-            result.confirm();
-            if (mOriginalWebChromeClient != null) {
-                return mOriginalWebChromeClient.onJsAlert(view, url, message, result);
-            }
-            return true;
         }
 
         @Override

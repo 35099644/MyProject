@@ -50,7 +50,8 @@ class WebElementCreator {
 	}
 
 	private void setLocation(WebElement webElement, float scale,int[] locationOfWebViewXY, int x, int y, int width, int height ){
-
+		// 注意 x,y,width,height可能是负值，这样的话在将webView上的坐标转换为屏幕上的坐标的时候就会产生偏移
+		// 这里并没有去理会如何对这样偏移做修正，因此，如果坐标与预想的不准确的话极有可能是这里出了问题!
 		int locationX = (int) (locationOfWebViewXY[0] + (x + (Math.floor(width / 2))) * scale);
 		int locationY = (int) (locationOfWebViewXY[1] + (y + (Math.floor(height / 2))) * scale);
 
@@ -69,6 +70,7 @@ class WebElementCreator {
 		String html = null;
 		Hashtable<String, String> attributes = new Hashtable<String, String>();
 		try{
+			// 注意：x,y,width,height的值有可能是负值
 			x = Math.round(Float.valueOf(data[5]));
 			y = Math.round(Float.valueOf(data[6]));
 			width = Math.round(Float.valueOf(data[7]));

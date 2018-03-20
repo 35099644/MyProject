@@ -4,6 +4,8 @@ import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.llx278.exeventbus.ExEventBus;
 import com.tensynchina.hook.utils.XLogger;
@@ -25,6 +27,7 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
     private static final String WE_CHAT = "com.tencent.mm";
     private ExecutorForMain mExecutorForMain;
     private ExecutorForTool mExecutorForTool;
+    private int count = 0;
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -74,15 +77,28 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     super.afterHookedMethod(param);
-                    Context context = (Context) param.args[0];
-                    Intent messageServiceIntent = new Intent("com.tensynchina.Message");
-                    messageServiceIntent.setComponent(new ComponentName("com.tensynchina.hook","com.tensynchina.hook.push.MessageService"));
-                    context.startService(messageServiceIntent);
-
-                    Intent taskServiceIntent = new Intent("com.tensynchina.Task");
-                    taskServiceIntent.setComponent(new ComponentName("com.tensynchina.hook","com.tensynchina.hook.task.TaskService"));
-                    context.startService(taskServiceIntent);
-                    XLogger.d("启动服务结束");
+                    count++;
+                    if (count == 1) {
+                        final Context context = (Context) param.args[0];
+                        final Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Intent messageServiceIntent = new Intent("com.tensynchina.Message");
+                                messageServiceIntent.setComponent(new ComponentName("com.tensynchina.hook","com.tensynchina.hook.push.MessageService"));
+                                context.startService(messageServiceIntent);
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Intent taskServiceIntent = new Intent("com.tensynchina.Task");
+                                        taskServiceIntent.setComponent(new ComponentName("com.tensynchina.hook","com.tensynchina.hook.task.TaskService"));
+                                        context.startService(taskServiceIntent);
+                                        XLogger.d("启动服务结束");
+                                    }
+                                },1000);
+                            }
+                        });
+                    }
                 }
             });
         }

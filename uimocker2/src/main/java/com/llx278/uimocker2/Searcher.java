@@ -687,7 +687,6 @@ public class Searcher {
         return null;
     }
 
-
     /**
      * 强制的遍历所有的view，找到所有view里面可能的文本，并返回包含正则表达式匹配的文本的view
      * @param regex 待匹配的文本

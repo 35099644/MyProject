@@ -17,13 +17,13 @@ import java.lang.reflect.Method;
  * 使得使用更加的方便一些。
  * @author llx
  */
-public class Solo {
+public class Solo implements ISolo {
 
     private static final long DEFAULT_SLEEP = 200;
     private static final long DEFAULT_TIME_OUT = 1000 * 20;
+    private static final long LITTLE_SLEEP = 1000;
 
     private static final String TAG = "Solo";
-    private static Solo INSTANCE;
 
 
     private final Clicker mClicker;
@@ -39,7 +39,7 @@ public class Solo {
     private final DialogUtils mDialogUtils;
     private final WebUtils mWebUtils;
 
-    private Solo(Context context) {
+    public Solo(Context context) {
 
         mInstrumentation = new MyInstrumentation(context);
 
@@ -61,45 +61,47 @@ public class Solo {
         }
     }
 
-    public static Solo getInstance(Context context) {
-        if (INSTANCE == null) {
-            INSTANCE = new Solo(context);
-        }
-        return INSTANCE;
-    }
-
+    @Override
     public Clicker getClicker() {
         return mClicker;
     }
 
+    @Override
     public Scroller getScroller() {
         return mScroller;
     }
 
+    @Override
     public Searcher getSearcher() {
         return mSearcher;
     }
 
+    @Override
     public ViewGetter getViewGetter() {
         return mViewGetter;
     }
 
+    @Override
     public Waiter getWaiter() {
         return mWaiter;
     }
 
+    @Override
     public Gesture getGesture() {
         return mGesture;
     }
 
+    @Override
     public ActivityUtils getActivityUtils() {
         return mActivityUtils;
     }
 
+    @Override
     public DialogUtils getDialogUtils() {
         return mDialogUtils;
     }
 
+    @Override
     public WebUtils getWebUtils(){
         return mWebUtils;
     }
@@ -110,6 +112,7 @@ public class Solo {
      * @param id 指定的id
      * @return 找的view，如果为空，则说明在默认给定的时间里面没有找到
      */
+    @Override
     public View findViewById(int id) {
         return findViewById(id, DEFAULT_TIME_OUT);
     }
@@ -121,6 +124,7 @@ public class Solo {
      * @param timeout 超时时间
      * @return 找的view，如果为空，则说明在给定的时间里面没有找到
      */
+    @Override
     public View findViewById(int id, long timeout) {
         long endTime = SystemClock.uptimeMillis() + timeout;
         while (SystemClock.uptimeMillis() < endTime) {
@@ -145,7 +149,8 @@ public class Solo {
      * @param parent 待寻找的view
      * @return 找到的view，如果为空则说明在默认超时时间里面没有找到
      */
-    public View findViewById(int id,View parent) {
+    @Override
+    public View findViewById(int id, View parent) {
         return findViewById(id,parent,DEFAULT_TIME_OUT);
     }
 
@@ -157,6 +162,7 @@ public class Solo {
      * @param timeout 超时时间
      * @return 找到的view，如果为空则说明在超时时间里面没有找到
      */
+    @Override
     public View findViewById(int id, View parent, long timeout) {
         if (parent == null) {
             return null;
@@ -173,6 +179,7 @@ public class Solo {
         return null;
     }
 
+    @Override
     public void mockSoftKeyBordSearchButton(EditText editText) throws Exception {
 
         Class<?> etClass = editText.getClass().getSuperclass();
@@ -194,20 +201,34 @@ public class Solo {
         onEditorActionMethod.invoke(onEditorActionListener, editText, EditorInfo.IME_ACTION_SEARCH, null);
     }
 
+    @Override
     public Context getContext() {
         return mInstrumentation.getContext();
     }
 
+    @Override
     public void runOnMainSync(Runnable runnable) {
         mInstrumentation.runOnMainSync(runnable);
     }
 
+    @Override
     public void sleep(long time){
         pause(time);
     }
 
-    public void waitForTextAndClick(String regex) {
+    @Override
+    public void littleSleep() {
+        pause(LITTLE_SLEEP);
+    }
+
+    @Override
+    public void littleSleep(int multiple) {
+        pause(LITTLE_SLEEP * multiple);
+    }
+
+    @Override
+    public boolean waitForTextAndClick(String regex) {
         View view = mWaiter.waitForTextAppearAndGet(regex, DEFAULT_TIME_OUT);
-        mClicker.clickOnView(view);
+        return mClicker.clickOnView(view);
     }
 }
