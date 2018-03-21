@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 public class Reflect {
 	private Object object;
 
-	Reflect(Object object) {
+	public Reflect(Object object) {
 		if (object == null)
 			throw new IllegalArgumentException("Object can not be null.");
 		this.object = object;

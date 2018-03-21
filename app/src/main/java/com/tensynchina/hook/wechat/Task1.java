@@ -53,7 +53,7 @@ public class Task1 extends BaseTask {
             solo.getClicker().clickOnView(biz);
             Thread.sleep(3000);
             // 点击公众号结束以后，再弹出的界面就进入了com.tencent.mm:tools进程
-            String tag = ExecutorForTool.TOOLS_TAG;
+            String tag = WConstant.TOOLS_TAG;
             ExEventBus.getDefault().
                     remotePublish(param, tag, Result.class.getName(), 1000 * 60);
             solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_CONTACT_UI,1000 * 5,0);

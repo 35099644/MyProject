@@ -2,12 +2,16 @@ package com.llx278.uimocker2;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 
@@ -19,40 +23,91 @@ import java.util.Stack;
 
 final class MyInstrumentation extends InstrumentationDecorator {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String TAG = "MyInstrumentation";
     /**
      * 记录activity运行状态
      */
     private final Stack<ActivityStateRecord> mActivityRecordStack;
 
+    private final Map<String, Bundle> mReplacedBundle;
+
     MyInstrumentation(Context context) {
         super(context);
         mActivityRecordStack = new Stack<>();
+        mReplacedBundle = new HashMap<>();
+    }
+
+    /**
+     * 在指定activity执行onCreate方法之前，对指定的bundle进行替换，把activity的启动参数替换成我们自己的。
+     * 注意：这里我只是用了{@link Bundle#putAll(Bundle)}方法，并不是替换bundle这个对象，这样如果你的bundle
+     * 里面有key和activity的bundle里的key相同的话，你的key对应的value就被替换到这个activity的bundle里面的对应
+     * key上了
+     *
+     * @param activityName 指定的activity名称
+     * @param bundle       被替换的bundle
+     */
+    public void addReplacedBundle(String activityName, Bundle bundle) {
+        mReplacedBundle.put(activityName, bundle);
+    }
+
+    /**
+     * 移除指定的activity所指定的可被替换的bundle
+     *
+     * @param activityName 指定的activity名
+     */
+    public void removeReplacedBundle(String activityName) {
+        mReplacedBundle.remove(activityName);
     }
 
     @Override
     public void callActivityOnCreate(Activity activity, Bundle icicle) {
         if (DEBUG) {
-            MLogger.d(TAG, "callActivityOnCreate : " + activity.getClass().getName());
-            MLogger.d(TAG, "ActivityName :" + activity.getClass().getName());
-            MLogger.d(TAG, "savedBundle:" + (icicle == null ? "null" : icicle.toString()));
-            MLogger.d(TAG, "intent : " + (activity.getIntent() == null ? "null" : activity.getIntent().toString()));
-            if (activity.getIntent() != null) {
-                Bundle extras = activity.getIntent().getExtras();
-                MLogger.d(TAG, "extras:" + (extras == null ? "null" : extras.toString()));
-                if (extras != null) {
-                    MLogger.d("printBundle");
-
-                }
-            }
+            MLogger.d("---- before ---- ");
+            printActivityInfo(activity, icicle);
+            MLogger.d("---- before ---- ");
         }
-        // 不应该阻止activity的执行，仅仅是通知上层调用者某个activity调用了onCreate方法而已
+
+        String activityName = activity.getClass().getName();
+        Bundle bundle = mReplacedBundle.get(activityName);
+        if (bundle != null) {
+            Intent intent = activity.getIntent();
+            intent.putExtras(bundle);
+        }
+
+        if (DEBUG) {
+            MLogger.d("---- after ---- ");
+            printActivityInfo(activity, icicle);
+            MLogger.d("---- after ---- ");
+        }
 
         super.callActivityOnCreate(activity, icicle);
         addToRecordStack(activity, ActivityStateRecord.ON_CREATE);
+
         if (DEBUG) {
             printStackInfo(mActivityRecordStack);
+        }
+    }
+
+    private void printActivityInfo(Activity activity, Bundle icicle) {
+        MLogger.d(TAG, "callActivityOnCreate : " + activity.getClass().getName());
+        MLogger.d(TAG, "ActivityName :" + activity.getClass().getName());
+        MLogger.d(TAG, "savedBundle:" + (icicle == null ? "null" : icicle.toString()));
+        MLogger.d(TAG, "intent : " + (activity.getIntent() == null ? "null" : activity.getIntent().toString()));
+        if (activity.getIntent() != null) {
+            Bundle extras = activity.getIntent().getExtras();
+            MLogger.d(TAG, "extras:" + (extras == null ? "null" : extras.toString()));
+            if (extras != null) {
+                MLogger.d("printBundle");
+                Set<String> ketSet = extras.keySet();
+                for (String key : ketSet) {
+                    Object value = extras.get(key);
+                    try {
+                        MLogger.d(TAG, "(key : value)=(" + key + " : " + value + ")");
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
         }
     }
 
@@ -205,7 +260,7 @@ final class MyInstrumentation extends InstrumentationDecorator {
         }
     }
 
-    void addToRecordStack(Activity activity, int currentLifeCycle) {
+    private void addToRecordStack(Activity activity, int currentLifeCycle) {
 
         synchronized (mActivityRecordStack) {
             if (mActivityRecordStack.isEmpty() && currentLifeCycle == ActivityStateRecord.ON_CREATE) {

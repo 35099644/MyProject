@@ -53,14 +53,17 @@ public class ReflectUtil {
     /**
      * 获得自定义view中所有可能是显示在屏幕上的字符串列表
      * @param customView 自定义的view
+     * @param regex 待匹配的正则表达式，如果是空串或null，则返回能找到的所有文本
      * @return 可能的字符串列表
      */
     public static ArrayList<String> getCustomViewText(View customView,String regex) {
-        Pattern pattern;
-        try{
-            pattern = Pattern.compile(regex);
-        }catch(PatternSyntaxException e){
-            pattern = Pattern.compile(regex, Pattern.LITERAL);
+        Pattern pattern = null;
+        if (!TextUtils.isEmpty(regex)) {
+            try{
+                pattern = Pattern.compile(regex);
+            }catch(PatternSyntaxException e){
+                pattern = Pattern.compile(regex, Pattern.LITERAL);
+            }
         }
 
         Class<?> currentClass = customView.getClass();
@@ -74,8 +77,14 @@ public class ReflectUtil {
                     if (o != null && o instanceof CharSequence) {
                         String str = o.toString();
                         if (!TextUtils.isEmpty(str)) {
-                            Matcher matcher = pattern.matcher(str);
-                            if (matcher.find()){
+                            if (pattern != null) {
+                                Matcher matcher = pattern.matcher(str);
+                                if (matcher.find()){
+                                    if (!fieldStrList.contains(str)) {
+                                        fieldStrList.add(str);
+                                    }
+                                }
+                            } else {
                                 if (!fieldStrList.contains(str)) {
                                     fieldStrList.add(str);
                                 }

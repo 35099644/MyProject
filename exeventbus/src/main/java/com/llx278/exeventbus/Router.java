@@ -17,6 +17,7 @@ import com.llx278.exeventbus.remote.TransportLayer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -109,6 +110,8 @@ public class Router implements Receiver {
 
     private EventBus mEventBus;
 
+    private final Object mWaitLock = new Object();
+
     /**
      * 保存了对从其他进程发送的消息进行处理的类的列表
      */
@@ -127,6 +130,8 @@ public class Router implements Receiver {
     private ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> mSubscribeEventList =
             new ConcurrentHashMap<>();
 
+    private final ArrayList<EventHolder> mStickyEventList = new ArrayList<>();
+
     public Router(Context context, EventBus eventBus) {
         IMockPhysicalLayer physicalLayer = new MockPhysicalLayer(context);
         mTransportLayer = new TransportLayer(physicalLayer);
@@ -143,6 +148,10 @@ public class Router implements Receiver {
         mMessageObserverList.add(new DestroyHandler());
 
         // 向其他进程发送一次查询消息，请求其他已经注册了EventBus的进程中所有Event列表
+        queryEventList();
+    }
+
+    private void queryEventList() {
         Bundle message = new Bundle();
         message.putString(KEY_ID, UUID.randomUUID().toString());
         message.putString(KEY_TYPE, TYPE_VALUE_OF_QUERY);
@@ -150,11 +159,11 @@ public class Router implements Receiver {
     }
 
 
-
     /**
      * 将此事件发送到其他的进程中执行
      * 注意，当一个事件被发布到多个进程中执行的时候，如果returnClassName是void.class.getName(),那么
      * 则只会只将此事件发送到其他的进程执行，直接返回。否则会等待，直到返回当前的执行后的结果。
+     *
      * @return 返回执行的结果，如果方法的返回值是void，则默认返回null，如果不是，则返回执行后的结果
      * @throws TimeoutException 超时
      */
@@ -163,31 +172,76 @@ public class Router implements Receiver {
         Event event = new Event(tag, eventObject.getClass().getName(), returnClassName, true);
         ArrayList<String> addressList = getAddressOf(event);
         // 先判断此事件是否已经被其他的进程注册了
+        long leftTime = timeout;
         if (addressList.isEmpty()) {
-            Log.d(TAG,"此事件还没有被其他进程注册!");
+            // 没有找到此事件，则发送一次广播，更新一下已经保存的事件列表，因为无法保证进程启动的顺序，
+            // 所以此刻保存的并非是最新的状态
+            long startTime = SystemClock.uptimeMillis();
+            queryEventList();
+            // 等待返回结果
+            synchronized (mWaitLock) {
+                try {
+                    mWaitLock.wait(timeout);
+                } catch (InterruptedException ignore) {
+                }
+            }
+
+            addressList = getAddressOf(event);
+            if (addressList.isEmpty()) {
+                Log.e(TAG, "此事件还没有被其他进程注册!");
+                return null;
+            }
+            // 计算一下查询事件花了多少时间
+            long elapsedTime = SystemClock.uptimeMillis() - startTime;
+            leftTime = timeout - elapsedTime;
+            if (leftTime <= 10) {
+                throw new TimeoutException("query events from other process cost too much time, " +
+                        "you should increase the duration of timeout!");
+            }
             return null;
         }
+
         if (returnClassName.equals(void.class.getName())) {
             for (String address : addressList) {
-                route(address,eventObject,tag,returnClassName,timeout);
+                route(address, eventObject, tag, returnClassName, leftTime);
             }
+            return null;
         } else {
             String address = addressList.get(0);
-            return route(address,eventObject,tag,returnClassName,timeout);
+            return route(address, eventObject, tag, returnClassName, leftTime);
+        }
+    }
+
+    /**
+     * 远程发布一个粘滞事件,粘滞事件的返回值没有意义
+     * 如果此事件已经注册了，那么就直接执行，如果没有注册，那么当接收到注册此事件的进程发送的注册信息以后
+     * 立即执行，而此方法并不会等待其他进程的执行结果
+     */
+    void stickyRoute(Object eventObject, String tag, long timeout) throws TimeoutException {
+
+        String returnClassName = void.class.getName();
+        Event event = new Event(tag, eventObject.getClass().getName(), returnClassName, true);
+        ArrayList<String> addressList = getAddressOf(event);
+        if (!addressList.isEmpty()) {
+            route(eventObject, tag, returnClassName, timeout);
         }
 
-        return null;
+        synchronized (mStickyEventList) {
+            EventHolder holder = new EventHolder(event, eventObject, timeout);
+            mStickyEventList.add(holder);
+        }
     }
 
 
     /**
      * 将事件发送到指定进程执行
+     *
      * @return 返回执行的结果，如果方法的返回值是void，则默认返回null，如果不是，则返回执行后的结果
      */
-    private Object route(String address,Object eventObject, String tag, String returnClassName, long timeout)
+    private Object route(String address, Object eventObject, String tag, String returnClassName, long timeout)
             throws TimeoutException {
         PublishHandler publishHandler = new PublishHandler(address);
-        return publishHandler.publishToRemote(eventObject,tag,returnClassName,timeout);
+        return publishHandler.publishToRemote(eventObject, tag, returnClassName, timeout);
     }
 
     public void destroy() {
@@ -351,7 +405,7 @@ public class Router implements Receiver {
                         throw new TimeoutException("wait publish result timeout!");
                     }
                 } catch (InterruptedException ignore) {
-                    Log.e("main","",ignore);
+                    Log.e("main", "", ignore);
                 }
                 // 删除已经执行结束的事件
                 mWaitingExecuteReturnValueMap.remove(mId);
@@ -399,8 +453,24 @@ public class Router implements Receiver {
             String typeValue = message.getString(KEY_TYPE);
             if (TYPE_VALUE_OF_QUERY_RESULT.equals(typeValue)) {
                 ArrayList<Event> queryEvents = message.getParcelableArrayList(KEY_QUERY_LIST);
+                CopyOnWriteArrayList<Event> events = mSubscribeEventList.get(where);
                 if (queryEvents != null) {
-                    mSubscribeEventList.put(where, new CopyOnWriteArrayList<>(queryEvents));
+                    if (events == null) {
+                        events = new CopyOnWriteArrayList<>();
+                    }
+                    events.addAllAbsent(queryEvents);
+                    mSubscribeEventList.put(where, events);
+                }
+
+                synchronized (mWaitLock) {
+                    mWaitLock.notify();
+                }
+
+                // 处理粘滞事件
+                synchronized (mStickyEventList) {
+                    for (Event event : events) {
+                        checkStickyList(event);
+                    }
                 }
                 return true;
             }
@@ -408,6 +478,33 @@ public class Router implements Receiver {
         }
     }
 
+    private void checkStickyList(Event event) {
+        Iterator<EventHolder> iterator = mStickyEventList.iterator();
+        while (iterator.hasNext()) {
+            final EventHolder holder = iterator.next();
+            if (holder.mEvent.equals(event)) {
+                executeEvent(holder);
+                iterator.remove();
+            }
+        }
+    }
+
+    private void executeEvent(final EventHolder holder) {
+        mExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Object eventObj = holder.mEventObj;
+                    String tag = holder.mEvent.getTag();
+                    String returnClassName = holder.mEvent.getReturnClassName();
+                    long timeout = holder.mTimeout;
+                    route(eventObj, tag, returnClassName, timeout);
+                } catch (TimeoutException e) {
+                    ELogger.e("执行sticky事件超时:" + holder, e);
+                }
+            }
+        });
+    }
 
     /**
      * 用来添加注册事件的类
@@ -426,8 +523,15 @@ public class Router implements Receiver {
                     if (events == null) {
                         events = new CopyOnWriteArrayList<>();
                     }
-                    events.addAll(newEvents);
+                    events.addAllAbsent(newEvents);
                     mSubscribeEventList.put(where, events);
+
+                    // 处理粘滞事件
+                    synchronized (mStickyEventList) {
+                        for (Event event : events) {
+                            checkStickyList(event);
+                        }
+                    }
                 }
                 return true;
             }
@@ -475,7 +579,7 @@ public class Router implements Receiver {
                 String tag = message.getString(KEY_TAG);
                 String returnClassName = message.getString(KEY_RETURN_CLASS_NAME);
                 Object returnValue = mEventBus.publish(eventObj, tag, returnClassName, true);
-                if(!TextUtils.isEmpty(returnClassName) && !returnClassName.equals(void.class.getName())) {
+                if (!TextUtils.isEmpty(returnClassName) && !returnClassName.equals(void.class.getName())) {
                     // 只有返回值类型是非空的才会发送回去
                     Bundle valueMessage = new Bundle();
                     valueMessage.putString(KEY_TYPE, TYPE_VALUE_OF_PUBLISH_RETURN_VALUE);
@@ -542,6 +646,27 @@ public class Router implements Receiver {
                 return true;
             }
             return false;
+        }
+    }
+
+    private class EventHolder {
+        final Event mEvent;
+        final Object mEventObj;
+        final long mTimeout;
+
+        EventHolder(Event event, Object eventObj, long timeout) {
+            mEvent = event;
+            mEventObj = eventObj;
+            mTimeout = timeout;
+        }
+
+        @Override
+        public String toString() {
+            return "EventHolder{" +
+                    "mEvent=" + mEvent +
+                    ", mEventObj=" + mEventObj +
+                    ", mTimeout=" + mTimeout +
+                    '}';
         }
     }
 }

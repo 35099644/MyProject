@@ -96,6 +96,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"丁香园\\\"]}\"}}";
     private static final String tag2 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":2,\"taskId\":\"123\",\"json\":\"{\\\"keyDes\\\":\\\"飞思卡尔\\\",\\\"time\\\":1500652800}\"}}";
     private static final String tag3 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":3,\"taskId\":\"1500652800\",\"json\":\"{\\\"keyDes\\\":\\\"丁香园\\\",\\\"time\\\":1512000000}\"}}";
+    private static final String tag4 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":4,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?src=11&timestamp=1521624601&ver=768&signature=IWnjlwNKJ0D8U5jBU-g7at-EKcHrIiwYvV6nMR0YP2zKhen8WTyLvmfVPnitwBGMo15DPQm-JFrm6rnovn7Y-acvIuZd1c7650zRS-XU1f2Oylw-7oZOX8*8OgS5OFJJ&new=1\\\"}\"}}";
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -127,6 +128,14 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
                         }
                     }.start();
                     break;
+                case "4":
+                new Thread(){
+                    @Override
+                    public void run() {
+                        publishMessage("2001",tag4);
+                    }
+                }.start();
+                break;
                 default:
             }
 

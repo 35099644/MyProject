@@ -21,7 +21,7 @@ public class Searcher {
 
     private static final String TAG = "uimocker";
     
-    private static final long DEFAULT_PAUSE_TIME = 200;
+    private static final long DEFAULT_PAUSE_TIME = 100;
     /**
      * 暂停的时间
      */

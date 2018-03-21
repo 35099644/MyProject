@@ -14,7 +14,6 @@ import com.tensynchina.hook.task.Result;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by llx on 2018/3/20.
@@ -70,7 +69,7 @@ public class Task3 extends BaseTask {
             solo.getClicker().clickOnView(historyView);
             solo.littleSleep(5);
             // 进入了tool进程
-            String tag = ExecutorForTool.TOOLS_TAG;
+            String tag = WConstant.TOOLS_TAG;
             String returnName = Result.class.getName();
             result = (Result) ExEventBus.getDefault().remotePublish(param, tag, returnName, 1000 * 60);
             solo.littleSleep();

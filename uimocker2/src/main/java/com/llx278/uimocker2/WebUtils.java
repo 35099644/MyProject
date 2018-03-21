@@ -175,6 +175,11 @@ public class WebUtils {
 		return proxy.canGoBackOrForward(steps);
 	}
 
+	public void loadUrl(View webView,String url) {
+		WebViewProxy proxy = WebViewProxyCreator.create(webView);
+		proxy.loadUrl(url);
+	}
+
 	private boolean isWebElementSufficientlyShown(WebElement webElement,View webView){
 
 		final int[] xyWebView = new int[2];

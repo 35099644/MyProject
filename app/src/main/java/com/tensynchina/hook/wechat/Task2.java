@@ -52,7 +52,7 @@ public class Task2 extends BaseTask {
             solo.littleSleep();
             solo.getClicker().clickOnView(articleView);
             // 等待tools进程的结果
-            String tag = ExecutorForTool.TOOLS_TAG;
+            String tag = WConstant.TOOLS_TAG;
             String returnName = Result.class.getName();
             result = (Result) ExEventBus.getDefault().remotePublish(param, tag, returnName, 1000 * 60 * 15);
             solo.littleSleep(5);

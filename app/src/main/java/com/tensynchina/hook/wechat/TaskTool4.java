@@ -1,8 +1,10 @@
 package com.tensynchina.hook.wechat;
 
 import android.view.View;
+import android.webkit.WebView;
 
-import com.llx278.exeventbus.exception.TimeoutException;
+import com.alibaba.fastjson.JSON;
+import com.llx278.exeventbus.ExEventBus;
 import com.llx278.uimocker2.By;
 import com.llx278.uimocker2.Filter;
 import com.llx278.uimocker2.ISolo;
@@ -18,33 +20,44 @@ import com.tensynchina.hook.utils.XLogger;
 import java.util.ArrayList;
 
 /**
- *
- * Created by llx on 2018/3/20.
+ * Created by llx on 2018/3/21.
  */
 
-public class TaskTool3 extends BaseTask {
+public class TaskTool4 extends BaseTask {
     @Override
-    public Result execute(ISolo solo, Param param) {
-        XLogger.d("进入 TaskTools3!");
-        solo = new SoloForTaskTool(solo);
+    public Result execute(ISolo soloparam, Param param) {
+        XLogger.d("进入TaskTool4");
+        final ISolo solo = new SoloForTaskTool(soloparam);
         Result result = new Result();
         result.setPackageName(param.getPackageName());
         result.setTaskTag(param.getTaskTag());
         result.setTaskId(param.getTaskId());
         result.setUuid(param.getAddressUuid());
+
         try {
-            solo.littleSleep(5);
+            final WeChatTask4 wt4 = JSON.parseObject(param.getJson(),WeChatTask4.class);
             final String webVieName = "com.tencent.smtt.sdk.WebView$SystemWebView";
-            View view = solo.getSearcher().searchViewByFilter(webVieName, null, new Filter() {
+            final View view = solo.getSearcher().searchViewByFilter(webVieName, null, new Filter() {
                 @Override
                 public boolean match(View view) {
                     return view.getClass().getName().equals(webVieName);
                 }
             }, true);
+            solo.runOnMainSync(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        solo.getWebUtils().loadUrl(view,wt4.getUrl());
+                    } catch (Exception e) {
+                        XLogger.e(e);
+                    }
+                }
+            });
+            Thread.sleep(1000 * 5);
             By tagName = By.tagName("html");
             ArrayList<WebElement> webElementList = solo.getWebUtils().
                     getWebElementList(tagName,
-                    false, view);
+                            false, view);
             WebElement webElement = webElementList.get(0);
             String html = "<html>"+webElement.getInnerHtml() + "</html>";
             IOUtils.stringToFile(false,html, Constant.RESULT_LOCAL_PATH);
@@ -53,7 +66,7 @@ public class TaskTool3 extends BaseTask {
         } catch (Exception e) {
             result.setError(new Error(Error.OTHER,e.getMessage()));
             return result;
-        } finally {
+        }finally {
             solo.getActivityUtils().finishOpenedActivities();
         }
     }

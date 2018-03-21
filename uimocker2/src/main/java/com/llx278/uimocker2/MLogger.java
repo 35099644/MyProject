@@ -1,5 +1,6 @@
 package com.llx278.uimocker2;
 
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.text.SimpleDateFormat;
@@ -13,13 +14,18 @@ import de.robv.android.xposed.XposedBridge;
  * Created by llx on 05/01/2018.
  */
 
-public class MLogger {
+class MLogger {
     private static final String TAG = "uimocker";
     private static final boolean DEBUG = true;
 
     public static void d(String tag, String msg) {
         if(DEBUG) {
             Log.d(tag,msg);
+            try {
+                String time = timeStamp2DateStr(SystemClock.currentThreadTimeMillis());
+                XposedBridge.log(time + "#" +tag + "#" + msg);
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -30,6 +36,11 @@ public class MLogger {
     public static void i(String tag,String msg) {
         if (DEBUG){
             Log.i(TAG,msg);
+            try {
+                String time = timeStamp2DateStr(SystemClock.currentThreadTimeMillis());
+                XposedBridge.log(time + "#" +tag + "#" + msg);
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -40,6 +51,11 @@ public class MLogger {
     public static void e(String tag,String msg,Throwable e){
         if (e != null) {
             Log.e(tag,msg,e);
+            try {
+                String time = timeStamp2DateStr(SystemClock.currentThreadTimeMillis());
+                XposedBridge.log(time + "#" +tag + "#" + msg);
+            } catch (Exception ignore) {
+            }
         }
     }
 

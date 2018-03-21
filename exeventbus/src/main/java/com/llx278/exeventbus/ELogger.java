@@ -11,7 +11,7 @@ import java.util.Locale;
  */
 
 public class ELogger {
-    private static final String TAG = "EventBusDecorator";
+    private static final String TAG = "ExEventBus";
     private static final boolean DEBUG = true;
     private static final String SPILT = "  ";
 

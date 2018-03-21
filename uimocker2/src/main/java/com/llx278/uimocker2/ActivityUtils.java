@@ -1,8 +1,8 @@
 package com.llx278.uimocker2;
 
 import android.app.Activity;
+import android.os.Bundle;
 import android.os.SystemClock;
-import android.util.Log;
 
 /**
  * 封装了一些activity相关的操作类
@@ -22,6 +22,14 @@ public class ActivityUtils {
             Thread.sleep(PAUSE_TIME);
         } catch (InterruptedException ignore) {
         }
+    }
+
+    public void addReplacedBundle(String activityName, Bundle bundle) {
+        mMyInst.addReplacedBundle(activityName,bundle);
+    }
+
+    public void removeReplacedBundle(String activityName){
+        mMyInst.removeReplacedBundle(activityName);
     }
 
     /**
