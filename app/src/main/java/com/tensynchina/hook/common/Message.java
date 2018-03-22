@@ -1,10 +1,11 @@
-package com.tensynchina.hook;
+package com.tensynchina.hook.common;
 
 import android.os.Parcel;
 import android.os.Parcelable;
 
 /**
  * 服务端收发消息的封装
+ * Message是进程间通信的载体，push包和task包都需要这个类，因此只能放到common包里
  * Created by llx on 2018/3/15.
  */
 

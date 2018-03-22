@@ -1,16 +1,12 @@
 package com.tensynchina.hook.wechat;
 
 import android.view.View;
-import android.webkit.WebView;
 
 import com.alibaba.fastjson.JSON;
-import com.llx278.exeventbus.ExEventBus;
 import com.llx278.uimocker2.By;
-import com.llx278.uimocker2.Filter;
 import com.llx278.uimocker2.ISolo;
-import com.llx278.uimocker2.Solo;
 import com.llx278.uimocker2.WebElement;
-import com.tensynchina.hook.Constant;
+import com.tensynchina.hook.common.Constant;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
@@ -37,12 +33,13 @@ public class TaskTool4 extends BaseTask {
         try {
             final WeChatTask4 wt4 = JSON.parseObject(param.getJson(),WeChatTask4.class);
             final String webVieName = "com.tencent.smtt.sdk.WebView$SystemWebView";
-            final View view = solo.getSearcher().searchViewByFilter(webVieName, null, new Filter() {
-                @Override
-                public boolean match(View view) {
-                    return view.getClass().getName().equals(webVieName);
-                }
-            }, true);
+            ArrayList<View> views = solo.getWaiter().waitForViewListAppearAndGet(webVieName, null);
+            if (views == null || views.isEmpty()) {
+                result.setError(new Error(Error.LAYOUT_ERROR,"没有找到 : " + webVieName));
+                return result;
+            }
+
+            final View view = views.get(0);
             solo.runOnMainSync(new Runnable() {
                 @Override
                 public void run() {

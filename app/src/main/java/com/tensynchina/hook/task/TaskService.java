@@ -11,7 +11,13 @@ import com.llx278.exeventbus.ExEventBus;
 import com.llx278.exeventbus.Subscriber;
 import com.llx278.exeventbus.ThreadModel;
 import com.orhanobut.logger.Logger;
-import com.tensynchina.hook.Message;
+import com.tensynchina.hook.common.Constant;
+import com.tensynchina.hook.common.Message;
+import com.tensynchina.hook.utils.XLogger;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -20,22 +26,21 @@ import com.tensynchina.hook.Message;
 
 public class TaskService extends Service {
 
-    public static final String RECEIVE_MESSAGE_TAG = "com_tensynchina_hook_task_TaskService_receiveMessage";
-
-    private Executor mExecutor;
-
+    private Executor mTaskExecutor;
+    private ExecutorService mThreadExecutor;
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d("main","taskService启动");
-        new Thread(){
+        mThreadExecutor = Executors.newFixedThreadPool(5);
+        mThreadExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 ExEventBus.create(TaskService.this);
                 ExEventBus.getDefault().register(TaskService.this);
             }
-        }.start();
-        mExecutor = new Executor(this);
+        });
+        mTaskExecutor = new Executor(this,mThreadExecutor);
     }
 
     @Nullable
@@ -44,7 +49,7 @@ public class TaskService extends Service {
         return null;
     }
 
-    @Subscriber(tag = RECEIVE_MESSAGE_TAG,model = ThreadModel.HANDLER,remote = true)
+    @Subscriber(tag = Constant.RECEIVE_MESSAGE_TAG,model = ThreadModel.HANDLER,remote = true)
     public void receiveMessage(Message message) {
 
         String uuid = message.getUuid();
@@ -53,17 +58,24 @@ public class TaskService extends Service {
         Task task = JSON.parseObject(msg,Task.class);
         // 每一个任务都要保存这个uuid，因为当这个任务执行结束需要这个uuid把任务发送回去
         task.getParam().setAddressUuid(uuid);
-        mExecutor.execute(task);
+        mTaskExecutor.execute(task);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        new Thread(){
+        mThreadExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 ExEventBus.destroy();
             }
-        }.start();
+        });
+        mTaskExecutor.stop();
+        mThreadExecutor.shutdown();
+        try {
+            mThreadExecutor.awaitTermination(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            XLogger.e(e);
+        }
     }
 }

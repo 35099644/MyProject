@@ -5,14 +5,15 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import com.alibaba.fastjson.JSON;
-import com.llx278.exeventbus.Event;
 import com.llx278.exeventbus.ExEventBus;
 import com.llx278.exeventbus.exception.TimeoutException;
 import com.orhanobut.logger.Logger;
-import com.tensynchina.hook.Message;
+import com.tensynchina.hook.common.Constant;
+import com.tensynchina.hook.common.Message;
 import com.tensynchina.hook.push.MessageService;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -23,89 +24,47 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Executor {
 
     private final BlockingQueue<Task> mUITaskQueue;
-    /**
-     * 缓存正在处理的任务
-     */
-    private Task mCurrentTask;
     private Context mContext;
+    private UITask mUiTask;
+    private KillerSchedule mSchedule;
 
-    Executor(Context context) {
+    Executor(Context context,ExecutorService poolExecutor) {
         mUITaskQueue = new LinkedBlockingQueue<>();
         mContext = context;
-        UITaskHandler uiHandler = new UITaskHandler();
-        uiHandler.start();
+        mUiTask = new UITask();
+        mSchedule = new KillerSchedule();
+        poolExecutor.execute(mUiTask);
+        poolExecutor.execute(mSchedule);
     }
 
     private void handleTask(Task task) {
-        Param param = task.getParam();
-        String packageName = param.getPackageName();
-        PackageManager packageManager = mContext.getPackageManager();
-        Intent launchIntentForPackage = packageManager.getLaunchIntentForPackage(packageName);
-        mContext.startActivity(launchIntentForPackage);
-        try {
-            // 等待1s，等待对应包名的app已经启动
-            Thread.sleep(1000);
-            String tag = packageName + "_TAG";
-            Logger.d("tag  : " + tag);
-            String resultClassName = Result.class.getName();
-            long timeout = 1000 * 60 * 5;
-            Result result = (Result) ExEventBus.getDefault().remotePublish(param,tag,resultClassName,timeout);
-            Logger.d("获得了微信的返回结果 : " + result);
-            if (result != null) {
-                ResultWrapper rw = new ResultWrapper(0,result);
-                String uuid = result.getUuid();
-                String resultMsg = JSON.toJSONString(rw);
-                Message msg = new Message(resultMsg,uuid);
-                ExEventBus.getDefault().remotePublish(msg, MessageService.MESSAGE_SEND_TAG,
-                        void.class.getName(),1000*5);
-            }
-        } catch (InterruptedException ignore) {
-        } catch (TimeoutException e) {
-            Logger.e(e,"");
+        TaskHandler taskHandler = TaskHandlerFactory.parse(task);
+        if (taskHandler != null) {
+            taskHandler.handle(mContext);
         }
     }
 
     void execute(Task task) {
-        if (Category.isUITask(task)) {
-
-            mUITaskQueue.add(task);
-
-        } else if (Category.isNoUITask(task)) {
-
-            if (mUITaskQueue.isEmpty() || mCurrentTask == null) {
-                // UI队列为空，或者自执行以来队列没有加入任何任务
-                mUITaskQueue.add(task);
-
-                // 这代表待执行的任务与当前运行的任务是同一个app，这样的话就可以把这个任务直接发送了，
-                // 因为当前app的进程已经启动了
-            } else if (mCurrentTask.getParam().getPackageName().
-                    equals(task.getParam().getPackageName())) {
-                // 这样做可能会导致偶发性的bug
-                handleTask(task);
-                //mUITaskQueue.add(task);
-            } else {
-                // 这需要将当前的app启动，因此一次只能执行一个app的任务，因此把此任务加入到ui的队列中去执行
-                mUITaskQueue.add(task);
-            }
-
-        }
+        mUITaskQueue.add(task);
     }
 
+    void stop() {
+        mUiTask.stop = true;
+        mSchedule.stop = true;
+    }
 
     /**
      * 处理UI的任务
      */
-    private class UITaskHandler extends Thread {
-
+    private class UITask implements Runnable {
+        private boolean stop = false;
         @Override
         public void run() {
-            while (true) {
+            while (!stop) {
                 try {
-
-
-                    mCurrentTask = mUITaskQueue.take();
+                    Task task = mUITaskQueue.take();
                     // 对任务进行处理
-                    handleTask(mCurrentTask);
+                    handleTask(task);
                     // 每10s一个任务
                     Thread.sleep(10 * 1000);
                 } catch (InterruptedException e) {
@@ -113,6 +72,35 @@ public class Executor {
                     break;
                 }
             }
+            Logger.d("UITask 退出");
+        }
+    }
+
+    private class KillerSchedule implements Runnable{
+
+        private boolean stop = false;
+
+        @Override
+        public void run() {
+            while (!stop) {
+                try {
+                    Thread.sleep(1000 * 60 * 20);
+                    // 每个固定事件都要添加一个任务
+                    Logger.d("添加一个杀死其他进程的任务");
+                    String taskJson = "{\"code\":1,\"param\":{\"taskTag\":1}}";
+                    Task task = JSON.parseObject(taskJson,Task.class);
+                    mUITaskQueue.add(task);
+                    Logger.d("添加一个Task5的任务");
+                    String task5Json = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\"," +
+                            "\"taskTag\":5,\"taskId\":\"111\",\"json\":\"{}\"}}";
+                    Task task5 = JSON.parseObject(task5Json,Task.class);
+                    mUITaskQueue.add(task5);
+                } catch (InterruptedException e) {
+                    Logger.e(e,"");
+                    break;
+                }
+            }
+            Logger.d("KillerSchedule 退出");
         }
     }
 }

@@ -13,9 +13,8 @@ import com.llx278.exeventbus.ThreadModel;
 import com.llx278.exeventbus.Type;
 import com.llx278.exeventbus.exception.TimeoutException;
 import com.orhanobut.logger.Logger;
-import com.tensynchina.hook.task.TaskService;
+import com.tensynchina.hook.common.*;
 import com.tensynchina.hook.utils.IOUtils;
-import com.tensynchina.hook.Message;
 import com.tensynchina.push.client.impl.AbstractPResponse;
 import com.tensynchina.push.client.impl.PClient;
 import com.tensynchina.push.client.impl.PRequest;
@@ -28,9 +27,6 @@ import com.tensynchina.push.sdk.android.PSReceiverWrapper;
  */
 
 public class MessageService extends Service implements PSReceiverWrapper.TimeoutNotifyDelegate {
-
-    public static final String MESSAGE_SEND_TAG = "com_tensynchina_hook_push_MessageService_sendMessage";
-    private static final String MESSAGE_RECEIVE_ACTION = "com.llx278.message.RECEIVE";
 
     private Receiver mReceiver;
     @Nullable
@@ -85,7 +81,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
         Logger.d("收到消息 ： " + msg);
         Message msgObj = new Message(msg,uuid);
         try {
-            ExEventBus.getDefault().remotePublish(msgObj, TaskService.RECEIVE_MESSAGE_TAG,
+            ExEventBus.getDefault().remotePublish(msgObj, com.tensynchina.hook.common.Constant.RECEIVE_MESSAGE_TAG,
                     void.class.getName(),3000);
             Logger.d("已经发送到PushService的广播");
         } catch (TimeoutException e) {
@@ -96,7 +92,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"丁香园\\\"]}\"}}";
     private static final String tag2 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":2,\"taskId\":\"123\",\"json\":\"{\\\"keyDes\\\":\\\"飞思卡尔\\\",\\\"time\\\":1500652800}\"}}";
     private static final String tag3 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":3,\"taskId\":\"1500652800\",\"json\":\"{\\\"keyDes\\\":\\\"丁香园\\\",\\\"time\\\":1512000000}\"}}";
-    private static final String tag4 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":4,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?src=11&timestamp=1521624601&ver=768&signature=IWnjlwNKJ0D8U5jBU-g7at-EKcHrIiwYvV6nMR0YP2zKhen8WTyLvmfVPnitwBGMo15DPQm-JFrm6rnovn7Y-acvIuZd1c7650zRS-XU1f2Oylw-7oZOX8*8OgS5OFJJ&new=1\\\"}\"}}";
+    private static final String tag4 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":4,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?__biz=MzA4NjM4NTUxNw==&mid=2657164513&idx=1&sn=4f3fc664bca18e150beb4da3efdea90f&scene=0#wechat_redirect\\\"}\"}}";
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -162,7 +158,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     }
 
     @SuppressLint("SdCardPath")
-    @Subscriber(tag = MESSAGE_SEND_TAG,model = ThreadModel.MAIN,remote = true,type = Type.DEFAULT)
+    @Subscriber(tag = Constant.MESSAGE_SEND_TAG,model = ThreadModel.MAIN,remote = true,type = Type.DEFAULT)
     public void sendMessage(Message message) {
         String uuid = message.getUuid();
         String msg = message.getMessage();
@@ -179,5 +175,13 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
         } catch (Exception e) {
             Logger.e(e,"");
         }
+    }
+
+    @Subscriber(tag = Constant.PUSH_MESSAGE_TAG,model = ThreadModel.MAIN,remote = true,type = Type.DEFAULT)
+    public void sendPushMessage(String pushMessage) {
+        Logger.d("MessageService 收到了主动推送的消息：" + pushMessage);
+        // 这里写死，推送消息只发送到这里
+        String uuid = "9001";
+        mReceiver.send(uuid,pushMessage);
     }
 }

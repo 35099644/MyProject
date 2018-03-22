@@ -4,7 +4,7 @@ package com.tensynchina.hook.push;
  * Created by llx on 02/05/2017.
  */
 
-public class Constant {
+public class PConstant {
 
     public static final String MASTER_HOST = "211.103.134.93";
     public static final int MAST_PORT = 29999;

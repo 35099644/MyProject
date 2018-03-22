@@ -388,17 +388,25 @@ public class Router implements Receiver {
 
             if (returnClassName.equals(void.class.getName())) {
                 // 空类型直接发送，不需要等待返回值
-                mTransportLayer.send(mAddress, message, timeout);
-
+                try {
+                    mTransportLayer.send(mAddress, message, timeout);
+                } catch (TimeoutException e) {
+                    mSubscribeEventList.remove(mAddress);
+                    throw new TimeoutException(e);
+                }
             } else {
                 // 其他类型需要缓存执行的事件，等待执行结果的返回
                 mWaitingExecuteReturnValueMap.put(mId, this);
                 long currentTime = SystemClock.uptimeMillis();
-                mTransportLayer.send(mAddress, message, timeout);
+                try {
+                    mTransportLayer.send(mAddress, message, timeout);
+                } catch (TimeoutException e) {
+                    mSubscribeEventList.remove(mAddress);
+                    throw new TimeoutException(e);
+                }
                 long endTime = SystemClock.uptimeMillis();
                 long elapsedTime = endTime - currentTime;
                 long leftTimeout = timeout - elapsedTime;
-                //mHasResult = false;
                 try {
                     if (!mDoneSignal.await(leftTimeout, TimeUnit.MILLISECONDS)) {
                         // 等待超时
@@ -431,7 +439,12 @@ public class Router implements Receiver {
                 valueMessage.putString(KEY_TYPE, TYPE_VALUE_OF_QUERY_RESULT);
                 valueMessage.putParcelableArrayList(KEY_QUERY_LIST, filterNoRemoteEventList(allEvents));
                 try {
-                    mTransportLayer.send(where, valueMessage, sDefaultTimeout);
+                    try {
+                        mTransportLayer.send(where, valueMessage, sDefaultTimeout);
+                    } catch (TimeoutException e) {
+                        mSubscribeEventList.remove(where);
+                        throw new TimeoutException(e);
+                    }
                 } catch (TimeoutException e) {
                     ELogger.e(TAG, "send message[typeValue = " + typeValue + " allEvents = " +
                             allEvents + "]", e);
@@ -597,6 +610,7 @@ public class Router implements Receiver {
                     try {
                         mTransportLayer.send(where, valueMessage, sDefaultTimeout);
                     } catch (TimeoutException e) {
+                        mSubscribeEventList.remove(where);
                         ELogger.e(TAG, "send message[typeValue = " + typeValue + " rturnvalue = " +
                                 returnValue + "]", e);
                     }

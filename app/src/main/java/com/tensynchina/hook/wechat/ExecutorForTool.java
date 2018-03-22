@@ -2,12 +2,15 @@ package com.tensynchina.hook.wechat;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Process;
 
+import com.llx278.exeventbus.ExEventBus;
 import com.llx278.exeventbus.Subscriber;
 import com.llx278.exeventbus.ThreadModel;
 import com.llx278.exeventbus.Type;
 import com.llx278.uimocker2.ISolo;
 import com.llx278.uimocker2.Solo;
+import com.tensynchina.hook.common.Constant;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
 import com.tensynchina.hook.utils.XLogger;
@@ -56,4 +59,10 @@ public class ExecutorForTool {
         mSolo.getActivityUtils().addReplacedBundle(activityName,newBundle);
     }
 
+    @Subscriber(tag = Constant.PROCESS_KILL_TAG,remote = true,model = ThreadModel.HANDLER)
+    public void killTask(String param) {
+        XLogger.d("com.tencent.mm:tools 准备 杀死自己");
+        ExEventBus.destroy();
+        Process.killProcess(Process.myPid());
+    }
 }

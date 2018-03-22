@@ -3,6 +3,8 @@ package com.tensynchina.hook.wechat;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ListView;
 
 import com.alibaba.fastjson.JSON;
 import com.llx278.exeventbus.ExEventBus;
@@ -12,9 +14,11 @@ import com.llx278.uimocker2.ReflectUtil;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
+import com.tensynchina.hook.utils.RegexUtils;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -33,49 +37,34 @@ public class Task4 extends BaseTask {
         result.setTaskTag(param.getTaskTag());
         result.setUuid(param.getAddressUuid());
         try {
-            View view = null;
-            solo.littleSleep(15);
+            ArrayList<ListView> listViews = solo.getWaiter().waitForViewListAppearAndGet(ListView.class, true);
+            ListView listView = listViews.get(0);
             long endTime = SystemClock.uptimeMillis() + 1000 * 20;
+            View nickNameView = null;
             while (SystemClock.uptimeMillis() < endTime) {
-                view = solo.getSearcher().searchViewByFilter("com.tencent.mm.ui.base.NoMeasuredTextView", null, new Filter() {
-                    @Override
-                    public boolean match(View view) {
-
-                        ArrayList<String> customViewText = ReflectUtil.getCustomViewText(view, null);
-                        for (String str : customViewText) {
-                            for (String nickName : WConstant.NICK_NAME_LIST) {
-                                if (TextUtils.equals(nickName, str)) {
-                                    return true;
-                                }
-                            }
-                        }
-                        return false;
-                    }
-                }, true);
-                if (view != null) {
+                solo.sleep(1000);
+                String className = "com.tencent.mm.ui.base.NoMeasuredTextView";
+                String regex = RegexUtils.toRegexStr(WConstant.NICK_NAME_LIST);
+                nickNameView = solo.getSearcher().forceSearchViewByTextAndClassName(className, listView, regex, true);
+                if (nickNameView != null) {
+                    XLogger.d("nickNameView: " + nickNameView);
                     break;
                 }
             }
-            if (view == null) {
+            if (nickNameView == null) {
                 result.setError(new Error(Error.LAYOUT_ERROR,
                         "没有在主页面上找到此微信指定的昵称,当前可用昵称:" + WConstant.NICK_NAME_LIST));
                 return result;
             }
-            solo.littleSleep(1);
-            solo.getClicker().clickOnView(view);
+            solo.littleSleep();
+            solo.getClicker().clickOnView(nickNameView);
             solo.littleSleep();
             View item = solo.getWaiter().waitForTextAppearAndGet("https://");
             if (item == null) {
                 result.setError(new Error(Error.LAYOUT_ERROR,"没有找到https://www.baidu.com，对应的按钮"));
                 return result;
             }
-            WeChatTask4 wt4 = JSON.parseObject(param.getJson(),WeChatTask4.class);
-            XLogger.d("先将url发送到tools进程");
-            String activityName = "com.tencent.mm.plugin.webview.ui.tools.WebViewUI";
-            ReplaceUrlEvent event = new ReplaceUrlEvent(activityName,wt4.getUrl());
-            //ExEventBus.getDefault().stickyRemotePublish(event, WConstant.TOOLS_REPLACE_URL,1000 * 15);
             solo.littleSleep();
-            XLogger.d("准备click");
             View viewById = solo.findViewById(0x7f10017a);
             solo.getClicker().clickOnView(viewById);
             solo.littleSleep();

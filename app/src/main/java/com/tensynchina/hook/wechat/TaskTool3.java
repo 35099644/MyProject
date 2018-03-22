@@ -2,13 +2,11 @@ package com.tensynchina.hook.wechat;
 
 import android.view.View;
 
-import com.llx278.exeventbus.exception.TimeoutException;
 import com.llx278.uimocker2.By;
 import com.llx278.uimocker2.Filter;
 import com.llx278.uimocker2.ISolo;
-import com.llx278.uimocker2.Solo;
 import com.llx278.uimocker2.WebElement;
-import com.tensynchina.hook.Constant;
+import com.tensynchina.hook.common.Constant;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;

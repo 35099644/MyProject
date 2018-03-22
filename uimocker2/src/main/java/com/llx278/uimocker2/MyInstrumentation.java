@@ -23,7 +23,7 @@ import java.util.Stack;
 
 final class MyInstrumentation extends InstrumentationDecorator {
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final String TAG = "MyInstrumentation";
     /**
      * 记录activity运行状态

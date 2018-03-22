@@ -9,8 +9,13 @@ import android.os.Looper;
 
 import com.llx278.exeventbus.ExEventBus;
 import com.tensynchina.hook.utils.XLogger;
+import com.tensynchina.hook.wechat.ExecutorForCpuLoader;
 import com.tensynchina.hook.wechat.ExecutorForMain;
+import com.tensynchina.hook.wechat.ExecutorForPush;
+import com.tensynchina.hook.wechat.ExecutorForSandBox;
+import com.tensynchina.hook.wechat.ExecutorForSupport;
 import com.tensynchina.hook.wechat.ExecutorForTool;
+import com.tensynchina.hook.wechat.WXDatabase;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -27,10 +32,14 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
     private static final String WE_CHAT = "com.tencent.mm";
     private ExecutorForMain mExecutorForMain;
     private ExecutorForTool mExecutorForTool;
+    private ExecutorForPush mExecutorForPush;
+    private ExecutorForCpuLoader mExecutorForCpuLoader;
+    private ExecutorForSandBox mExecutorForSandBox;
+    private ExecutorForSupport mExecutorForSupport;
     private int count = 0;
 
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (lpparam.packageName.equals(WE_CHAT)) {
             if ("com.tencent.mm".equals(lpparam.processName)) {
                 XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class,
@@ -40,6 +49,15 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                         super.afterHookedMethod(param);
                         // 注册exeventbus
                         XLogger.d("进入 com.tencent.mm");
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabase());
                         new Thread(){
                             @Override
                             public void run() {
@@ -52,6 +70,7 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                         }.start();
                     }
                 });
+
             } else if ("com.tencent.mm:tools".equals(lpparam.processName)) {
                 XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                     @Override
@@ -66,6 +85,78 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.create(context);
                                 mExecutorForTool = new ExecutorForTool(context);
                                 ExEventBus.getDefault().register(mExecutorForTool);
+                            }
+                        }.start();
+                    }
+                });
+            } else if ("com.tencent.mm:push".equals(lpparam.processName)) {
+                XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+                        XLogger.d("进入 com.tencent.mm:push");
+                        new Thread(){
+                            @Override
+                            public void run() {
+                                XLogger.d("在com.tencent.mm:push进程内注册ExEventBus");
+                                Context context = (Context) param.args[0];
+                                ExEventBus.create(context);
+                                mExecutorForPush = new ExecutorForPush();
+                                ExEventBus.getDefault().register(mExecutorForPush);
+                            }
+                        }.start();
+                    }
+                });
+            } else if ("com.tencent.mm:support".equals(lpparam.processName)) {
+                XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+                        XLogger.d("进入 com.tencent.mm:support");
+                        new Thread(){
+                            @Override
+                            public void run() {
+                                XLogger.d("在com.tencent.mm:support进程内注册ExEventBus");
+                                Context context = (Context) param.args[0];
+                                ExEventBus.create(context);
+                                mExecutorForSupport = new ExecutorForSupport();
+                                ExEventBus.getDefault().register(mExecutorForSupport);
+                            }
+                        }.start();
+                    }
+                });
+            } else if ("com.tencent.mm:cuploader".equals(lpparam.processName)) {
+                XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+                        XLogger.d("进入 com.tencent.mm:cpuloader");
+                        new Thread(){
+                            @Override
+                            public void run() {
+                                XLogger.d("在com.tencent.mm:cpuloader进程内注册ExEventBus");
+                                Context context = (Context) param.args[0];
+                                ExEventBus.create(context);
+                                mExecutorForCpuLoader= new ExecutorForCpuLoader(context);
+                                ExEventBus.getDefault().register(mExecutorForCpuLoader);
+                            }
+                        }.start();
+                    }
+                });
+            } else if ("com.tencent.mm:sandbox".equals(lpparam.processName)) {
+                XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+                        XLogger.d("进入 com.tencent.mm:sandbox");
+                        new Thread(){
+                            @Override
+                            public void run() {
+                                XLogger.d("在com.tencent.mm:sandbox进程内注册ExEventBus");
+                                Context context = (Context) param.args[0];
+                                ExEventBus.create(context);
+                                mExecutorForSandBox = new ExecutorForSandBox(context);
+                                ExEventBus.getDefault().register(mExecutorForSandBox);
                             }
                         }.start();
                     }

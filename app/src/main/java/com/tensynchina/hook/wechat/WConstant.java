@@ -15,7 +15,7 @@ public class WConstant {
     static final String TOOLS_REPLACE_URL = "com.tencent.mm:tools_replace_url";
 
     static {
-        NICK_NAME_LIST.add("少帮主");
+        NICK_NAME_LIST.add("^少帮主$");
     }
 
     public static final String ACTIVITY_LAUNCH_UI = "com.tencent.mm.ui.LauncherUI";

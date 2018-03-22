@@ -10,8 +10,6 @@ import com.tensynchina.push.sdk.android.PSReceiverWrapper;
 
 import java.io.File;
 
-import de.robv.android.xposed.XposedBridge;
-
 /**
  * Created by llx on 28/06/2017.
  */
@@ -95,16 +93,16 @@ public class Receiver {
         try {
             String configStr = IOUtils.fileToString(configFile.getAbsolutePath());
             JSONObject jo = JSON.parseObject(configStr);
-            token = jo.getString(Constant.TOKEN);
-            vids = jo.getString(Constant.VIDS);
-            sids = jo.getString(Constant.SIDS);
-            uuid = jo.getString(Constant.UUID);
-            masterHost = jo.getString(Constant.HOST);
-            masterPort = jo.getString(Constant.PORT);
+            token = jo.getString(PConstant.TOKEN);
+            vids = jo.getString(PConstant.VIDS);
+            sids = jo.getString(PConstant.SIDS);
+            uuid = jo.getString(PConstant.UUID);
+            masterHost = jo.getString(PConstant.HOST);
+            masterPort = jo.getString(PConstant.PORT);
             if (mReceiver == null) {
                 mReceiver = PSReceiverWrapper.getInstance(token, uuid, masterHost, Integer.valueOf(masterPort));
-                mReceiver.getRequest().add(Constant.SIDS, sids);
-                mReceiver.getRequest().add(Constant.VIDS, vids);
+                mReceiver.getRequest().add(PConstant.SIDS, sids);
+                mReceiver.getRequest().add(PConstant.VIDS, vids);
                 mReceiver.setTimeout(10000);
                 mReceiver.tostart();
             } else {

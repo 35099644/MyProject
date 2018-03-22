@@ -536,6 +536,27 @@ public class Waiter {
         return null;
     }
 
+    public boolean waitForViewListAppear(String className,View parent) {
+        ArrayList<View> views = waitForViewListAppearAndGet(className, parent, DEFAULT_WAIT_TIMEOUT);
+        return views != null && !views.isEmpty();
+    }
+
+    public ArrayList<View> waitForViewListAppearAndGet(String className,View parent) {
+        return waitForViewListAppearAndGet(className,parent,DEFAULT_WAIT_TIMEOUT);
+    }
+
+    public ArrayList<View> waitForViewListAppearAndGet(String className,View parent,long timeout) {
+        long endTime = SystemClock.uptimeMillis() + timeout;
+        while (SystemClock.uptimeMillis() < endTime) {
+            pause();
+            ArrayList<View> viewListByName = mViewGetter.getViewListByName(className, parent, true);
+            if (viewListByName != null && !viewListByName.isEmpty()) {
+                return viewListByName;
+            }
+        }
+        return null;
+    }
+
     private boolean isActivityMatching(Activity currentActivity, String activityName) {
         return currentActivity != null && currentActivity.getClass().getName().equals(activityName);
 
