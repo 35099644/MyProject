@@ -15,8 +15,8 @@ import com.tensynchina.hook.utils.XLogger;
 public class ExecutorForPush {
     @Subscriber(tag = Constant.PROCESS_KILL_TAG,remote = true,model = ThreadModel.HANDLER)
     public void killTask(String param) {
-        XLogger.d("com.tencent.mm:push 准备 杀死自己");
+        XLogger.d("com.tencent.mm:push 接收到杀死自己的任务 但不 杀死自己");
         ExEventBus.destroy();
-        Process.killProcess(Process.myPid());
+        //Process.killProcess(Process.myPid());
     }
 }

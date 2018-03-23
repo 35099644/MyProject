@@ -16,6 +16,11 @@ import com.tensynchina.hook.wechat.ExecutorForSandBox;
 import com.tensynchina.hook.wechat.ExecutorForSupport;
 import com.tensynchina.hook.wechat.ExecutorForTool;
 import com.tensynchina.hook.wechat.WXDatabase;
+import com.tensynchina.hook.wechat.WXDatabaseCPULoader;
+import com.tensynchina.hook.wechat.WXDatabasePush;
+import com.tensynchina.hook.wechat.WXDatabaseSandbox;
+import com.tensynchina.hook.wechat.WXDatabaseSupport;
+import com.tensynchina.hook.wechat.WXDatabaseTools;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -87,6 +92,16 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.getDefault().register(mExecutorForTool);
                             }
                         }.start();
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabaseTools());
+
                     }
                 });
             } else if ("com.tencent.mm:push".equals(lpparam.processName)) {
@@ -105,6 +120,15 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.getDefault().register(mExecutorForPush);
                             }
                         }.start();
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabasePush());
                     }
                 });
             } else if ("com.tencent.mm:support".equals(lpparam.processName)) {
@@ -123,6 +147,16 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.getDefault().register(mExecutorForSupport);
                             }
                         }.start();
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabaseSupport());
+
                     }
                 });
             } else if ("com.tencent.mm:cuploader".equals(lpparam.processName)) {
@@ -141,6 +175,15 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.getDefault().register(mExecutorForCpuLoader);
                             }
                         }.start();
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabaseCPULoader());
                     }
                 });
             } else if ("com.tencent.mm:sandbox".equals(lpparam.processName)) {
@@ -159,6 +202,15 @@ public class XposedHookLoadPackage implements IXposedHookLoadPackage {
                                 ExEventBus.getDefault().register(mExecutorForSandBox);
                             }
                         }.start();
+                        XposedHelpers.findAndHookMethod(
+                                "com.tencent.wcdb.database.SQLiteDatabase",
+                                lpparam.classLoader,
+                                "insertWithOnConflict",
+                                "java.lang.String",
+                                "java.lang.String",
+                                "android.content.ContentValues",
+                                int.class,
+                                new WXDatabaseSandbox());
                     }
                 });
             }

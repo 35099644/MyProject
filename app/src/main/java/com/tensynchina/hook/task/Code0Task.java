@@ -6,10 +6,12 @@ import android.content.pm.PackageManager;
 
 import com.alibaba.fastjson.JSON;
 import com.llx278.exeventbus.ExEventBus;
+import com.llx278.exeventbus.Router;
 import com.llx278.exeventbus.exception.TimeoutException;
 import com.orhanobut.logger.Logger;
 import com.tensynchina.hook.common.Constant;
 import com.tensynchina.hook.common.Message;
+import com.tensynchina.hook.utils.XLogger;
 
 /**
  *
@@ -37,6 +39,14 @@ public class Code0Task extends TaskHandler {
             Result result = (Result) ExEventBus.getDefault().remotePublish(mParam,tag,resultClassName,timeout);
             Logger.d("获得了微信的返回结果 : " + result);
             if (result != null) {
+                if (result.getError().getCode() == Error.OTHER) {
+                    XLogger.d("发现了一个999错误，杀死所有进程");
+                    String kileventObj = "killSelf";
+                    String killtag = Constant.PROCESS_KILL_TAG;
+                    String killreturnClassName = void.class.getName();
+                    long killtimeout = 1000 * 5;
+                    ExEventBus.getDefault().remotePublish(kileventObj,killtag,killreturnClassName,killtimeout);
+                }
                 ResultWrapper rw = new ResultWrapper(0,result);
                 String uuid = result.getUuid();
                 String resultMsg = JSON.toJSONString(rw);

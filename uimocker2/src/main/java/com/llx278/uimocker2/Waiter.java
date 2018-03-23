@@ -18,7 +18,7 @@ import java.util.List;
 public class Waiter {
 
     private static final long DEFAULT_WAIT_TIMEOUT = 1000 * 20;
-    public static final long DEFAULT_PAUSE_TIMEOUT = 200;
+    public static final long DEFAULT_PAUSE_TIMEOUT = 500;
     /**
      * 等待循环中每一次循环的暂停时间默认是{@link Waiter#DEFAULT_PAUSE_TIMEOUT},
      * 可以修改此值来改变暂停时间

@@ -33,29 +33,34 @@ function clickElement(element) {
 function id(id, click) {
     var element = document.getElementById(id);
     if (element != null) {
-
         if (click == 'true') {
             clickElement(element);
-            break;
-        } else {
-            promptElement(element);
+            finished();
+            return;
         }
-    } else {
-        for (var key in document.all) {
-            try {
-                element = document.all[key];
-                if (element.id == id) {
-                    if (click == 'true') {
-                        clickElement(element);
-                        break;
-                    } else {
-                        promptElement(element);
-                    }
-                }
-            } catch(ignored) {}
-        }
+        promptElement(element);
+        finished();
+        return;
+
     }
-    finished();
+
+    try {
+        for (var key in document.all) {
+            element = document.all[key];
+            if (element.id == id) {
+                if (click == 'true') {
+                    clickElement(element);
+                    finished();
+                    return;
+                }
+                promptElement(element);
+                finished();
+                return;
+            }
+
+        }
+    } catch(ignored) {}
+
 }
 
 function xpath(xpath, click) {
@@ -278,6 +283,10 @@ function promptText(element, range) {
             prompt('inject_result:text:' + id + split + text + split + name + split + className + split + tagName + split + rect.left + split + rect.top + split + rect.width + split + rect.height);
         }
     }
+}
+
+function debug(text) {
+    prompt('inject_result:debu:' + text);
 }
 
 function finished() {

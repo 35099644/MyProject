@@ -134,6 +134,10 @@ class WebViewInjector {
                 case "fini":
                     mWebElementCreator.setFinished(true);
                     break;
+                case "debu":
+                    //mWebElementCreator.setFinished(true);
+                    MLogger.d("js-debug : " + msg);
+                    break;
                 default:
             }
             return true;

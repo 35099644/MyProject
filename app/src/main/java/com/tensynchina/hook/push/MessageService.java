@@ -93,6 +93,9 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     private static final String tag2 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":2,\"taskId\":\"123\",\"json\":\"{\\\"keyDes\\\":\\\"飞思卡尔\\\",\\\"time\\\":1500652800}\"}}";
     private static final String tag3 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":3,\"taskId\":\"1500652800\",\"json\":\"{\\\"keyDes\\\":\\\"丁香园\\\",\\\"time\\\":1512000000}\"}}";
     private static final String tag4 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":4,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?__biz=MzA4NjM4NTUxNw==&mid=2657164513&idx=1&sn=4f3fc664bca18e150beb4da3efdea90f&scene=0#wechat_redirect\\\"}\"}}";
+    private static final String tag7 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":7,\"taskId\":\"111\"}}";
+    private static final String tag8 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":8,\"taskId\":\"111\",\"json\":\"{\\\"keyDes\\\":[\\\"BBC\\\",\\\"BBC-每日更新\\\",\\\"\\\",\\\"中国政府网\\\",\\\"BBC奇妙大自然\\\",\\\"法律\\\"]}\"}}";
+    private static final String tag10 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":10,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?__biz=MzA4NjM4NTUxNw==&mid=2657164513&idx=1&sn=4f3fc664bca18e150beb4da3efdea90f&scene=0#wechat_redirect\\\"}\"}}";
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -132,6 +135,30 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
                     }
                 }.start();
                 break;
+                case "7":
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            publishMessage("2001",tag7);
+                        }
+                    }.start();
+                    break;
+                case "8":
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            publishMessage("2001",tag8);
+                        }
+                    }.start();
+                    break;
+                case "10":
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            publishMessage("2001",tag10);
+                        }
+                    }.start();
+                    break;
                 default:
             }
 

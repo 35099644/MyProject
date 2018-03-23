@@ -3,12 +3,7 @@ package com.tensynchina.hook.wechat;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.os.Process;
-import android.text.TextUtils;
 
-import com.alibaba.fastjson.JSON;
-import com.tensynchina.hook.task.Executor;
-import com.tensynchina.hook.task.Result;
-import com.tensynchina.hook.utils.IOUtils;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.lang.ref.WeakReference;
@@ -17,23 +12,20 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 
 /**
  *
  * Created by llx on 2018/3/22.
  */
 
-public class WXDatabase extends XC_MethodHook {
+public class WXDatabaseSandbox extends XC_MethodHook {
 
     private static List<WeakReference<Object>> sWXDataBaseObjList = new ArrayList<>();
     private PushSender mSender;
 
-    public WXDatabase() {
+    public WXDatabaseSandbox() {
         mSender = new PushSender();
         mSender.start();
     }
@@ -50,36 +42,12 @@ public class WXDatabase extends XC_MethodHook {
             // 先这样吧。
             String methodName = param.method.getName();
             if ("insertWithOnConflict".equals(methodName)) {
+                XLogger.d("sandbox进程收到了插入消息!!!!!!!!111111111111111111111");
                 String table = (String) param.args[0];
                 String nullColumnHack = (String) param.args[1];
                 ContentValues contentValues = (ContentValues) param.args[2];
                 int conflictAlgorithm = (int) param.args[3];
-                checkIsAPushMessage(table,nullColumnHack,contentValues,conflictAlgorithm);
-            }
-        }
-    }
-
-    private void checkIsAPushMessage(String table, String nullColumnHack, ContentValues initiaValues,
-                                     int conflictAlgorithm) {
-        if (table.equals(Table.Message.tableName)) {
-            String inputStr = initiaValues.getAsString(Table.Message.CONTENT);
-            if (TextUtils.isEmpty(inputStr)) {
-                return;
-            }
-            String talker = initiaValues.getAsString(Table.Message.TALKER);
-            XLogger.d("currentTalker : " + talker);
-            if (inputStr.startsWith("~SEMI_XML~")) {
-                if (TextUtils.isEmpty(talker)) {
-                    XLogger.d("message tab 中的talker列为空！");
-                }
-                String nickname = findNickName(talker);
-                List<String> urlList = findWeixinUrls(inputStr);
-                if (urlList.isEmpty()) {
-                    XLogger.d("没有过滤到合适的url!!!");
-                    XLogger.d("此时的content: " + inputStr);
-                    return;
-                }
-                packageTaskAndSend(urlList,nickname);
+                printParam(table,contentValues);
             }
         }
     }
@@ -96,51 +64,6 @@ public class WXDatabase extends XC_MethodHook {
             }
         }
     }
-
-    private void packageTaskAndSend(List<String> urlList, String nickname) {
-        XLogger.d("抓取到了公众号: "+ nickname + " url : " + urlList);
-        WeChatTask5 weChatTask5 = new WeChatTask5();
-        weChatTask5.setUrlList(urlList);
-        weChatTask5.setNickname(nickname);
-        String data = JSON.toJSONString(weChatTask5);
-        Result result = new Result();
-        result.setPackageName("com.tencent.mm");
-        result.setTaskTag(5);
-        result.setTaskId("-1");
-        result.setData(data);
-        mSender.addPushMessage(result);
-    }
-
-    private List<String> findWeixinUrls(String inputStr) {
-
-        String regex = "(http|https){1}://mp.weixin.qq.com/[a-zA-Z0-9&=?_]*#rd";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher m = pattern.matcher(inputStr);
-        List<String> urlList = new ArrayList<>();
-        while (m.find()) {
-            String url = m.group(0);
-            if (urlList.contains(url)) {
-                continue;
-            }
-            urlList.add(url);
-        }
-        return urlList;
-    }
-
-    private String findNickName(String username) {
-        Cursor cursor = rawQuery("select nickname from rcontact where username = ?", new String[]{username});
-        String nickname = null;
-        if (cursor != null) {
-            try {
-                cursor.moveToNext();
-                nickname = cursor.getString(0);
-            } catch (Exception e) {
-                XLogger.e(e);
-            }
-        }
-        return nickname;
-    }
-
 
     /**
      * 检查一下这个数据库对象的引用是不是已经存在了，如果不存在，那么久加进入
@@ -181,8 +104,7 @@ public class WXDatabase extends XC_MethodHook {
         return null;
     }
 
-    public static Cursor rawQuery(String sql, String[] selectionArgs) {
-        Object sqliteDatabase = getAvailableDBRef();
+    public static Cursor rawQuery(Object sqliteDatabase,String sql, String[] selectionArgs) {
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!!");
             return null;
@@ -197,8 +119,7 @@ public class WXDatabase extends XC_MethodHook {
         }
     }
 
-    public static int delete(String table,String whereClause,String[] whereArgs) {
-        Object sqliteDatabase = getAvailableDBRef();
+    public static int delete(Object sqliteDatabase,String table,String whereClause,String[] whereArgs) {
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!");
             return -1;
@@ -213,8 +134,7 @@ public class WXDatabase extends XC_MethodHook {
         }
     }
 
-    public static void execSQL (String sql) {
-        Object sqliteDatabase = getAvailableDBRef();
+    public static void execSQL (Object sqliteDatabase,String sql) {
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!!");
             return;
@@ -228,8 +148,7 @@ public class WXDatabase extends XC_MethodHook {
         }
     }
 
-    public static long insert (String table,String nullColumnHack,ContentValues values) {
-        Object sqliteDatabase = getAvailableDBRef();
+    public static long insert (Object sqliteDatabase,String table,String nullColumnHack,ContentValues values) {
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!");
             return -1;
@@ -244,11 +163,10 @@ public class WXDatabase extends XC_MethodHook {
         }
     }
 
-    public static int update (String table,
+    public static int update (Object sqliteDatabase,String table,
                               ContentValues values,
                               String whereClause,
                               String[] whereArgs) {
-        Object sqliteDatabase = getAvailableDBRef();
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!!");
             return -1;
@@ -263,7 +181,7 @@ public class WXDatabase extends XC_MethodHook {
         }
     }
 
-    public static Cursor query(String table,
+    public static Cursor query(Object sqliteDatabase,String table,
                                String[] columns,
                                String selection,
                                String[] selectionArgs,
@@ -271,7 +189,6 @@ public class WXDatabase extends XC_MethodHook {
                                String having,
                                String orderBy,
                                String limit) {
-        Object sqliteDatabase = getAvailableDBRef();
         if (sqliteDatabase == null) {
             XLogger.d("没有找到数据库连接，返回!!");
             return null;

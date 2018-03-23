@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.support.v4.content.LocalBroadcastManager;
 
 /**
  * 对ITransferLayer的具体实现
@@ -21,6 +23,8 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     private Context mContext;
     private FilterReceiver mFilterReceiver;
     private Receiver mListener;
+    private Handler mHandler;
+    private HandlerThread mHandlerThread;
 
     public MockPhysicalLayer(Context context) {
         mContext = context;
@@ -34,10 +38,15 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     @Override
     public void destroy() {
         mContext.unregisterReceiver(mFilterReceiver);
+        mHandlerThread.quitSafely();
         mContext = null;
     }
 
     private void register() {
+        mHandlerThread = new HandlerThread("ExEventBus-MockPhysicalLayer-BroadcastThread");
+        mHandlerThread.start();
+        mHandler = new Handler(mHandlerThread.getLooper());
+
         mFilterReceiver = new FilterReceiver();
         // 对外注册一个广播，这个广播只能由特定的action和category的组合才能够接受到消息，就相当于一台电脑的ip地址
         IntentFilter intentFilter = new IntentFilter();
@@ -46,7 +55,7 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
         for (String category : filter.getCategories()) {
             intentFilter.addCategory(category);
         }
-        mContext.registerReceiver(mFilterReceiver,intentFilter);
+        mContext.registerReceiver(mFilterReceiver, intentFilter,null,mHandler);
     }
 
     @Override
@@ -58,13 +67,13 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
             intent.addCategory(category);
         }
         intent.putExtra(KEY_WHERE, Address.createOwnAddress().toString());
-        intent.putExtra(KEY_MESSAGE,message);
+        intent.putExtra(KEY_MESSAGE, message);
         mContext.sendBroadcast(intent);
     }
 
     public void receive(final String where, final Bundle message) {
         if (mListener != null) {
-            mListener.onMessageReceive(where,message);
+            mListener.onMessageReceive(where, message);
         }
     }
 
@@ -72,7 +81,6 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     public void setOnReceiveListener(Receiver listener) {
         mListener = listener;
     }
-
 
 
     private class FilterReceiver extends BroadcastReceiver {
@@ -86,7 +94,7 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
                     return;
                 }
                 Bundle message = intent.getParcelableExtra(KEY_MESSAGE);
-                MockPhysicalLayer.this.receive(where,message);
+                MockPhysicalLayer.this.receive(where, message);
             }
         }
     }

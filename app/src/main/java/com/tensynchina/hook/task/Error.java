@@ -60,9 +60,11 @@ public class Error implements Parcelable {
      * 关注公众号失败
      */
     public static final int ACCOUNT_FOLLOW_FAILED  = 16;
-
+    /**
+     * 访问数据库出错
+     */
+    public static final int ACCESS_DB_ERROR = 17;
     public static final int OTHER = 999;
-
 
 
 

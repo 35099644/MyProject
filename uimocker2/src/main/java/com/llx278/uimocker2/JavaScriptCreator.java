@@ -49,29 +49,34 @@ class JavaScriptCreator {
             "function id(id, click) {\n" +
             "    var element = document.getElementById(id);\n" +
             "    if (element != null) {\n" +
-            "\n" +
             "        if (click == 'true') {\n" +
             "            clickElement(element);\n" +
-            "            break;\n" +
-            "        } else {\n" +
-            "            promptElement(element);\n" +
+            "            finished();\n" +
+            "            return;\n" +
             "        }\n" +
-            "    } else {\n" +
-            "        for (var key in document.all) {\n" +
-            "            try {\n" +
-            "                element = document.all[key];\n" +
-            "                if (element.id == id) {\n" +
-            "                    if (click == 'true') {\n" +
-            "                        clickElement(element);\n" +
-            "                        break;\n" +
-            "                    } else {\n" +
-            "                        promptElement(element);\n" +
-            "                    }\n" +
-            "                }\n" +
-            "            } catch(ignored) {}\n" +
-            "        }\n" +
+            "        promptElement(element);\n" +
+            "        finished();\n" +
+            "        return;\n" +
+            "\n" +
             "    }\n" +
-            "    finished();\n" +
+            "\n" +
+            "    try {\n" +
+            "        for (var key in document.all) {\n" +
+            "            element = document.all[key];\n" +
+            "            if (element.id == id) {\n" +
+            "                if (click == 'true') {\n" +
+            "                    clickElement(element);\n" +
+            "                    finished();\n" +
+            "                    return;\n" +
+            "                }\n" +
+            "                promptElement(element);\n" +
+            "                finished();\n" +
+            "                return;\n" +
+            "            }\n" +
+            "\n" +
+            "        }\n" +
+            "    } catch(ignored) {}\n" +
+            "\n" +
             "}\n" +
             "\n" +
             "function xpath(xpath, click) {\n" +
@@ -296,10 +301,15 @@ class JavaScriptCreator {
             "    }\n" +
             "}\n" +
             "\n" +
+            "function debug(text) {\n" +
+            "    prompt('inject_result:debu:' + text);\n" +
+            "}\n" +
+            "\n" +
             "function finished() {\n" +
             "    prompt('inject_result:fini:finish');\n" +
             "}";
     String createJavaScript(String function,String frame) {
+        MLogger.d("functon : " + function);
         String javaScript = setWebFrame(JAVA_SCRIPT,frame);
         return "javascript:" + javaScript + function;
     }
