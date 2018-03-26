@@ -26,6 +26,10 @@ public class ExecutorForTool {
 
     public ExecutorForTool(Context context) {
         mSolo = new Solo(context);
+        // 在这里对activity的启动做一下拦截，
+        XLogger.d("准备拦截activity");
+        WebActivityObserver mObserver = new WebActivityObserver();
+        mSolo.getActivityUtils().addActivityLifeObserver(mObserver);
     }
 
     /**
@@ -52,11 +56,6 @@ public class ExecutorForTool {
     @Subscriber(tag = WConstant.TOOLS_REPLACE_URL,remote = true)
     public void replaceUrl(ReplaceUrlEvent event) {
         XLogger.d("准备替换activity的启动参数");
-        String url = event.getUrl();
-        String activityName = event.getActivityName();
-        Bundle newBundle = new Bundle();
-        newBundle.putString("rawUrl",url);
-        mSolo.getActivityUtils().addReplacedBundle(activityName,newBundle);
     }
 
     @Subscriber(tag = Constant.PROCESS_KILL_TAG,remote = true,model = ThreadModel.HANDLER)

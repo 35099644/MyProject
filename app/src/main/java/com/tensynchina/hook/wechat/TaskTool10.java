@@ -32,8 +32,6 @@ public class TaskTool10 extends BaseTask {
         result.setTaskId(param.getTaskId());
         result.setUuid(param.getAddressUuid());
         try {
-
-            final WeChatTask10 wt10 = JSON.parseObject(param.getJson(),WeChatTask10.class);
             final String webVieName = "com.tencent.smtt.sdk.WebView$SystemWebView";
             ArrayList<View> views = solo.getWaiter().waitForViewListAppearAndGet(webVieName, null);
             if (views == null || views.isEmpty()) {
@@ -42,16 +40,6 @@ public class TaskTool10 extends BaseTask {
             }
 
             final View view = views.get(0);
-            solo.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        solo.getWebUtils().loadUrl(view,wt10.getUrl());
-                    } catch (Exception e) {
-                        XLogger.e(e);
-                    }
-                }
-            });
             Thread.sleep(1000 * 5);
             By id = By.id("post-user");
             ArrayList<WebElement> webElementList = solo.getWebUtils().getWebElementList(id, false, view);

@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * Created by llx on 2018/3/23.
  */
 
@@ -54,13 +53,12 @@ public class Task7 extends BaseTask {
         result.setUuid(param.getAddressUuid());
 
         try {
+            solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_LAUNCH_UI,1000 * 20,0);
             List<String> nicknameList = new ArrayList<>();
-            Cursor cursor = WXDatabase.rawQuery(sql,null);
+            Cursor cursor = WXDatabase.rawQuery(sql, null);
             if (cursor != null) {
-                XLogger.d("公众号表的名字大小：" + cursor.getCount() + "");
                 while (cursor.moveToNext()) {
                     String nickname = cursor.getString(cursor.getColumnIndex("nickname"));
-                    XLogger.d("nickname = " + nickname);
                     if (!TextUtils.isEmpty(nickname)) {
                         nicknameList.add(nickname);
                     }
@@ -73,7 +71,7 @@ public class Task7 extends BaseTask {
             return result;
         } catch (Exception e) {
             XLogger.e(e);
-            result.setError(new Error(Error.ACCESS_DB_ERROR,"进入微信的数据库失败"));
+            result.setError(new Error(Error.ACCESS_DB_ERROR, "进入微信的数据库失败"));
             return result;
         } finally {
             solo.getActivityUtils().finishOpenedActivities();

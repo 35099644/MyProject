@@ -84,7 +84,7 @@ public class Executor {
         public void run() {
             while (!stop) {
                 try {
-                    Thread.sleep(1000 * 60 * 20);
+                    Thread.sleep(1000 * 60 * 60);
                     // 每个固定事件都要添加一个任务
                     Logger.d("添加一个杀死其他进程的任务");
                     String taskJson = "{\"code\":1,\"param\":{\"taskTag\":1}}";

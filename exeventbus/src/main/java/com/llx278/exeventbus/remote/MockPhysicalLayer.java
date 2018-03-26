@@ -7,12 +7,10 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.support.v4.content.LocalBroadcastManager;
 
 /**
  * 对ITransferLayer的具体实现
- * 这里用广播来实现消息间的通信，因为只有广播能做到在动态注册，而其他的ipc机制，contentProvider
- * service的binder都需要静态注册才能够运行.
+ * 这里用广播来实现消息间的通信，因为只有广播能做到在动态注册.
  * Created by llx on 2018/2/28.
  */
 
@@ -23,7 +21,6 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     private Context mContext;
     private FilterReceiver mFilterReceiver;
     private Receiver mListener;
-    private Handler mHandler;
     private HandlerThread mHandlerThread;
 
     public MockPhysicalLayer(Context context) {
@@ -45,7 +42,7 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     private void register() {
         mHandlerThread = new HandlerThread("ExEventBus-MockPhysicalLayer-BroadcastThread");
         mHandlerThread.start();
-        mHandler = new Handler(mHandlerThread.getLooper());
+        Handler mHandler = new Handler(mHandlerThread.getLooper());
 
         mFilterReceiver = new FilterReceiver();
         // 对外注册一个广播，这个广播只能由特定的action和category的组合才能够接受到消息，就相当于一台电脑的ip地址
@@ -55,7 +52,7 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
         for (String category : filter.getCategories()) {
             intentFilter.addCategory(category);
         }
-        mContext.registerReceiver(mFilterReceiver, intentFilter,null,mHandler);
+        mContext.registerReceiver(mFilterReceiver, intentFilter,null, mHandler);
     }
 
     @Override
@@ -71,7 +68,7 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
         mContext.sendBroadcast(intent);
     }
 
-    public void receive(final String where, final Bundle message) {
+    private void receive(final String where, final Bundle message) {
         if (mListener != null) {
             mListener.onMessageReceive(where, message);
         }
@@ -81,7 +78,6 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     public void setOnReceiveListener(Receiver listener) {
         mListener = listener;
     }
-
 
     private class FilterReceiver extends BroadcastReceiver {
 

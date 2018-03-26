@@ -1,10 +1,13 @@
 package com.llx278.exeventbus;
 
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import de.robv.android.xposed.XposedBridge;
 
 /**
  * Created by llx on 2018/2/3.
@@ -13,11 +16,18 @@ import java.util.Locale;
 public class ELogger {
     private static final String TAG = "ExEventBus";
     private static final boolean DEBUG = true;
-    private static final String SPILT = "  ";
 
     public static void d(String tag, String msg) {
         if(DEBUG) {
             Log.d(tag,msg);
+            try {
+                String timeStamp = timeStamp2DateStr(SystemClock.currentThreadTimeMillis()/1000);
+                Class<?> aClass = Class.forName("de.robv.android.xposed.XposedBridge");
+                if (aClass != null) {
+                    XposedBridge.log(timeStamp + " " + tag + " " + msg);
+                }
+
+            } catch (Exception ignore){}
         }
     }
 
@@ -28,6 +38,13 @@ public class ELogger {
     public static void i(String tag,String msg) {
         if (DEBUG){
             Log.i(TAG,msg);
+            try {
+                String timeStamp = timeStamp2DateStr(SystemClock.currentThreadTimeMillis()/1000);
+                Class<?> aClass = Class.forName("de.robv.android.xposed.XposedBridge");
+                if (aClass != null) {
+                    XposedBridge.log(timeStamp + " " + tag + " " + msg);
+                }
+            } catch (Exception ignore){}
         }
     }
 
@@ -38,6 +55,14 @@ public class ELogger {
     public static void e(String tag,String msg,Throwable e){
         if (e != null) {
             Log.e(tag,msg,e);
+            try {
+                String timeStamp = timeStamp2DateStr(SystemClock.currentThreadTimeMillis()/1000);
+                Class<?> aClass = Class.forName("de.robv.android.xposed.XposedBridge");
+                if (aClass != null) {
+                    XposedBridge.log(timeStamp + " " + tag + " " + msg);
+                    XposedBridge.log(e);
+                }
+            } catch (Exception ignore){}
         }
     }
 

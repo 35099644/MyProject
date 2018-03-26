@@ -30,59 +30,51 @@ final class MyInstrumentation extends InstrumentationDecorator {
      */
     private final Stack<ActivityStateRecord> mActivityRecordStack;
 
-    private final Map<String, Bundle> mReplacedBundle;
+    private ArrayList<ActivityLifeCycleObserver> mObserverList = new ArrayList<>();
 
     MyInstrumentation(Context context) {
         super(context);
         mActivityRecordStack = new Stack<>();
-        mReplacedBundle = new HashMap<>();
     }
 
     /**
-     * 在指定activity执行onCreate方法之前，对指定的bundle进行替换，把activity的启动参数替换成我们自己的。
-     * 注意：这里我只是用了{@link Bundle#putAll(Bundle)}方法，并不是替换bundle这个对象，这样如果你的bundle
-     * 里面有key和activity的bundle里的key相同的话，你的key对应的value就被替换到这个activity的bundle里面的对应
-     * key上了
-     *
-     * @param activityName 指定的activity名称
-     * @param bundle       被替换的bundle
+     * 添加一个observer
+     * @param observer 指定的observer
      */
-    public void addReplacedBundle(String activityName, Bundle bundle) {
-        mReplacedBundle.put(activityName, bundle);
+    void addActivityLifeCycleObserver(ActivityLifeCycleObserver observer) {
+        if (observer != null && !mObserverList.contains(observer)) {
+            mObserverList.add(observer);
+        }
     }
 
     /**
-     * 移除指定的activity所指定的可被替换的bundle
-     *
-     * @param activityName 指定的activity名
+     * 移除一个observer
+     * @param observer 指定的observer
      */
-    public void removeReplacedBundle(String activityName) {
-        mReplacedBundle.remove(activityName);
+    void removeActivityLifeCycleObserver(ActivityLifeCycleObserver observer) {
+        if (mObserverList.contains(observer)) {
+            mObserverList.remove(observer);
+        }
     }
 
     @Override
     public void callActivityOnCreate(Activity activity, Bundle icicle) {
-        if (DEBUG) {
-            MLogger.d("---- before ---- ");
-            printActivityInfo(activity, icicle);
-            MLogger.d("---- before ---- ");
-        }
-
-        String activityName = activity.getClass().getName();
-        Bundle bundle = mReplacedBundle.get(activityName);
-        if (bundle != null) {
-            Intent intent = activity.getIntent();
-            intent.putExtras(bundle);
-        }
 
         if (DEBUG) {
-            MLogger.d("---- after ---- ");
             printActivityInfo(activity, icicle);
-            MLogger.d("---- after ---- ");
+        }
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.beforeOnCreate(activity,icicle);
         }
 
         super.callActivityOnCreate(activity, icicle);
+
         addToRecordStack(activity, ActivityStateRecord.ON_CREATE);
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.afterOnCreate(activity,icicle);
+        }
 
         if (DEBUG) {
             printStackInfo(mActivityRecordStack);
@@ -117,8 +109,19 @@ final class MyInstrumentation extends InstrumentationDecorator {
         if (DEBUG) {
             MLogger.d(TAG, "callActivityOnResume activityName : " + activity.getClass().getName());
         }
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.beforeOnResume(activity);
+        }
+
         super.callActivityOnResume(activity);
+
         addToRecordStack(activity, ActivityStateRecord.ON_RESUME);
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.afterOnResume(activity);
+        }
+
         if (DEBUG) {
             printStackInfo(mActivityRecordStack);
         }
@@ -129,8 +132,19 @@ final class MyInstrumentation extends InstrumentationDecorator {
         if (DEBUG) {
             MLogger.d(TAG, "callActivityOnPause activityName : " + activity.getClass().getName());
         }
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.beforeOnPause(activity);
+        }
+
         super.callActivityOnPause(activity);
+
         addToRecordStack(activity, ActivityStateRecord.ON_PAUSE);
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.afterOnPause(activity);
+        }
+
         if (DEBUG) {
             printStackInfo(mActivityRecordStack);
         }
@@ -142,12 +156,26 @@ final class MyInstrumentation extends InstrumentationDecorator {
             MLogger.d(TAG, "callActivityOnDestroy activityName : " + activity.getClass().getName());
         }
 
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.beforeOnDestroy(activity);
+        }
+
         super.callActivityOnDestroy(activity);
+
+        for (ActivityLifeCycleObserver observer : mObserverList) {
+            observer.afterOnDestroy(activity);
+        }
+
         removeActivityFromStack(activity);
+
         if (DEBUG) {
             printStackInfo(mActivityRecordStack);
         }
     }
+
+
+
+    // ------------ package method ------------------
 
     /**
      * 判断给定的activityName经历了指定的lifeCycle
@@ -160,7 +188,7 @@ final class MyInstrumentation extends InstrumentationDecorator {
      *                     栈顶和栈顶的下一个.
      * @return true 指定的activity经历了指定的lifeCycle false 指定的lifeCycle还没有发生
      */
-    public boolean isExpectedActivityLifeCycle(String activityName, int lifeCycle, int deep) {
+    boolean isExpectedActivityLifeCycle(String activityName, int lifeCycle, int deep) {
 
         if (lifeCycle > ActivityStateRecord.ON_PAUSE) {
             Log.d("main", "lifeCycle : " + lifeCycle);
@@ -187,8 +215,6 @@ final class MyInstrumentation extends InstrumentationDecorator {
             return false;
         }
     }
-
-    // ------------ package method ------------------
 
     Activity getCurrentActivity() {
         if (mActivityRecordStack.isEmpty()) {

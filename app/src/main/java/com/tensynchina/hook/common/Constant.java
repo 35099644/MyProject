@@ -3,6 +3,7 @@ package com.tensynchina.hook.common;
 import android.annotation.SuppressLint;
 
 /**
+ *
  * Created by llx on 2018/3/20.
  */
 
@@ -25,7 +26,7 @@ public class Constant {
     /**
      * 订阅向{@link com.tensynchina.hook.push.MessageService}发送推送消息的事件
      */
-    public static final String PUSH_MESSAGE_TAG = "_tensynchina_hook_push_MessageService_pushMessage";
+    public static final String PUSH_MESSAGE_TAG = "com_tensynchina_hook_push_MessageService_pushMessage";
 
     public static final String WX_TASK_TAG = "com.tencent.mm_TAG";
 }

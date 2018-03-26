@@ -8,7 +8,6 @@ import com.llx278.exeventbus.exception.TimeoutException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,8 +50,7 @@ public class TransportLayer implements ITransportLayer {
         // 对每一个待发送的消息添加一个id，这个id唯一的标识了一条消息
         // 最好的形式是将这个id作为message的消息头，但是这里用的bundle，无法做字符串的拼接
         // 因此，这里存在的隐患就是如果message中存在着某个字段与KEY_ID相同的话会导致覆盖掉消息体的内容
-        // 目前只能将KEY_ID这个字符串尽量设计的复杂一些，但实际上key都应该是有意义的字符串，如果真的一致了
-        // 那...该买彩票了!
+        // 目前只能将KEY_ID这个字符串尽量设计的复杂一些，但实际上key都应该是有意义的字符串.
         message.putString(KEY_ID, id);
         mMockPhysicalLayer.send(address,message);
         CountDownLatch signal = new CountDownLatch(1);

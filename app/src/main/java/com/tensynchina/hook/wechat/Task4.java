@@ -1,5 +1,6 @@
 package com.tensynchina.hook.wechat;
 
+import android.content.Context;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.view.View;
@@ -14,7 +15,9 @@ import com.llx278.uimocker2.ReflectUtil;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
+import com.tensynchina.hook.utils.IOUtils;
 import com.tensynchina.hook.utils.RegexUtils;
+import com.tensynchina.hook.utils.WaiterUtils;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.util.ArrayList;
@@ -37,6 +40,8 @@ public class Task4 extends BaseTask {
         result.setTaskTag(param.getTaskTag());
         result.setUuid(param.getAddressUuid());
         try {
+            String paramStr = JSON.toJSONString(param);
+            IOUtils.stringToFile(false,paramStr,WConstant.REPLACEABLE_URL);
             ArrayList<ListView> listViews = solo.getWaiter().waitForViewListAppearAndGet(ListView.class, true);
             ListView listView = listViews.get(0);
             long endTime = SystemClock.uptimeMillis() + 1000 * 20;
@@ -68,6 +73,20 @@ public class Task4 extends BaseTask {
             View viewById = solo.findViewById(0x7f10017a);
             solo.getClicker().clickOnView(viewById);
             solo.littleSleep();
+
+            // 等待tools进程的结果
+            String processName = WConstant.WX_TOOLS_PROCESS;
+            Context context = solo.getContext();
+            long timeout = 1000 * 15;
+            boolean hasCreated = WaiterUtils.waitForProcessCreated(context, processName, timeout);
+            if (!hasCreated) {
+                result.setError(new Error(Error.LAYOUT_ERROR,"没有等到" + WConstant.WX_TOOLS_PROCESS + "启动"));
+                return result;
+            }
+            solo.littleSleep(5);
+            // 点击公众号结束以后，再弹出的界面就进入了com.tencent.mm:tools进程
+            XLogger.d("准备向tool进程发送消息");
+
             String returnClassName = Result.class.getName();
             result = (Result) ExEventBus.getDefault().remotePublish(param, WConstant.TOOLS_TAG,
                     returnClassName, 1000 * 60);

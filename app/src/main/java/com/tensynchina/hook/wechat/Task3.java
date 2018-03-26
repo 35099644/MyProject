@@ -1,5 +1,6 @@
 package com.tensynchina.hook.wechat;
 
+import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ListView;
@@ -11,6 +12,7 @@ import com.llx278.uimocker2.ISolo;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
+import com.tensynchina.hook.utils.WaiterUtils;
 import com.tensynchina.hook.utils.XLogger;
 
 import java.util.ArrayList;
@@ -67,7 +69,20 @@ public class Task3 extends BaseTask {
             }
             solo.littleSleep();
             solo.getClicker().clickOnView(historyView);
+            // 等待tools进程的结果
+            String processName = WConstant.WX_TOOLS_PROCESS;
+            Context context = solo.getContext();
+
+            long timeout = 1000 * 15;
+            boolean hasCreated = WaiterUtils.waitForProcessCreated(context, processName, timeout);
+            if (!hasCreated) {
+                result.setError(new Error(Error.LAYOUT_ERROR,"没有等到" + WConstant.WX_TOOLS_PROCESS + "启动"));
+                return result;
+            }
             solo.littleSleep(5);
+            // 点击公众号结束以后，再弹出的界面就进入了com.tencent.mm:tools进程
+            XLogger.d("准备向tool进程发送消息");
+
             // 进入了tool进程
             String tag = WConstant.TOOLS_TAG;
             String returnName = Result.class.getName();

@@ -16,6 +16,7 @@ import com.tensynchina.hook.utils.XLogger;
 import java.util.ArrayList;
 
 /**
+ *
  * Created by llx on 2018/3/21.
  */
 
@@ -31,7 +32,6 @@ public class TaskTool4 extends BaseTask {
         result.setUuid(param.getAddressUuid());
 
         try {
-            final WeChatTask4 wt4 = JSON.parseObject(param.getJson(),WeChatTask4.class);
             final String webVieName = "com.tencent.smtt.sdk.WebView$SystemWebView";
             ArrayList<View> views = solo.getWaiter().waitForViewListAppearAndGet(webVieName, null);
             if (views == null || views.isEmpty()) {
@@ -40,16 +40,6 @@ public class TaskTool4 extends BaseTask {
             }
 
             final View view = views.get(0);
-            solo.runOnMainSync(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        solo.getWebUtils().loadUrl(view,wt4.getUrl());
-                    } catch (Exception e) {
-                        XLogger.e(e);
-                    }
-                }
-            });
             Thread.sleep(1000 * 5);
             By tagName = By.tagName("html");
             ArrayList<WebElement> webElementList = solo.getWebUtils().

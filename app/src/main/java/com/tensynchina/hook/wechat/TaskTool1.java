@@ -24,8 +24,10 @@ public class TaskTool1 extends BaseTask {
     @Override
     public Result execute(ISolo soloArg, final Param param) {
 
+        final  ISolo solo = new SoloForTaskTool(soloArg);
         try {
-            final  ISolo solo = new SoloForTaskTool(soloArg);
+            XLogger.d("进入TaskTool1");
+
             WeChatTask1 wtt1 = JSON.parseObject(param.getJson(),WeChatTask1.class);
             final String name = wtt1.getKeyDes().get(0);
             final EditText editText = solo.getWaiter().waitForEditTextAppearAndGet("^搜索公众号$",1000 * 20);
@@ -39,6 +41,7 @@ public class TaskTool1 extends BaseTask {
                     }
                 }
             });
+            solo.littleSleep();
             solo.runOnMainSync(new Runnable() {
                 @Override
                 public void run() {
@@ -49,8 +52,7 @@ public class TaskTool1 extends BaseTask {
                     }
                 }
             });
-            Thread.sleep(5000);
-            XLogger.d("获取此页面的源码");
+            solo.littleSleep(5);
             final String webVieName = "com.tencent.smtt.sdk.WebView$SystemWebView";
             View view = solo.getSearcher().searchViewByFilter(webVieName, null, new Filter() {
                 @Override
@@ -58,14 +60,17 @@ public class TaskTool1 extends BaseTask {
                     return view.getClass().getName().equals(webVieName);
                 }
             }, true);
+            XLogger.d("准备点击!");
             By title = By.attribute("title",name);
             ArrayList<WebElement> webElementList1 = solo.getWebUtils().getWebElementList(title, false, view);
-            WebElement web = webElementList1.get(0);
-            solo.getClicker().clickOnScreen(web.getLocationX(),web.getLocationY());
-            Thread.sleep(1500);
-            solo.getActivityUtils().finishOpenedActivities();
+            solo.littleSleep();
+            WebElement webElement = webElementList1.get(0);
+            solo.getClicker().clickOnScreen(webElement.getLocationX(),webElement.getLocationY());
+            solo.littleSleep(5);
         } catch (Exception e) {
             XLogger.e(e);
+        } finally {
+            solo.getActivityUtils().finishOpenedActivities();
         }
         return null;
     }

@@ -309,7 +309,6 @@ class JavaScriptCreator {
             "    prompt('inject_result:fini:finish');\n" +
             "}";
     String createJavaScript(String function,String frame) {
-        MLogger.d("functon : " + function);
         String javaScript = setWebFrame(JAVA_SCRIPT,frame);
         return "javascript:" + javaScript + function;
     }

@@ -1,6 +1,7 @@
 package com.tensynchina.hook.wechat;
 
 import android.app.Activity;
+import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.TextView;
@@ -12,6 +13,7 @@ import com.llx278.uimocker2.ISolo;
 import com.tensynchina.hook.task.Error;
 import com.tensynchina.hook.task.Param;
 import com.tensynchina.hook.task.Result;
+import com.tensynchina.hook.utils.WaiterUtils;
 import com.tensynchina.hook.utils.XLogger;
 
 
@@ -31,52 +33,64 @@ public class Task1 extends BaseTask {
             result.setTaskId(param.getTaskId());
             result.setTaskTag(param.getTaskTag());
             result.setUuid(param.getAddressUuid());
-            WeChatTask1 wtt1 = JSON.parseObject(param.getJson(),WeChatTask1.class);
+            WeChatTask1 wtt1 = JSON.parseObject(param.getJson(), WeChatTask1.class);
             final String name = wtt1.getKeyDes().get(0);
 
             if (TextUtils.isEmpty(name)) {
-                result.setError(new Error(Error.KEY_EMPTY,"公众号名为空!!"));
+                result.setError(new Error(Error.KEY_EMPTY, "公众号名为空!!"));
                 return result;
             }
             solo = new SoloForTask(solo);
-            Thread.sleep(1000);
+            solo.littleSleep();
+            solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_LAUNCH_UI,1000 * 20,0);
             View searchIcon = solo.findViewById(1);
             if (searchIcon == null) {
-                result.setError(new Error(Error.LAYOUT_ERROR,"没有找到搜索按钮"));
+                result.setError(new Error(Error.LAYOUT_ERROR, "没有找到搜索按钮"));
                 return result;
             }
-
+            solo.littleSleep(5);
             XLogger.d("点击搜索按钮");
             solo.getClicker().clickOnView(searchIcon);
             View biz = solo.getWaiter().waitForTextAppearAndGet("^公众号$", 1000 * 20);
+            solo.littleSleep(2);
             XLogger.d("点击公众号按钮");
             solo.getClicker().clickOnView(biz);
-            Thread.sleep(3000);
+
+            String processName = WConstant.WX_TOOLS_PROCESS;
+            Context context = solo.getContext();
+            long timeout = 1000 * 15;
+            boolean hasCreated = WaiterUtils.waitForProcessCreated(context, processName, timeout);
+            if (!hasCreated) {
+                result.setError(new Error(Error.LAYOUT_ERROR,"没有等到" + WConstant.WX_TOOLS_PROCESS + "启动"));
+                return result;
+            }
+            solo.littleSleep(5);
             // 点击公众号结束以后，再弹出的界面就进入了com.tencent.mm:tools进程
+            XLogger.d("准备向tool进程发送消息");
             String tag = WConstant.TOOLS_TAG;
             ExEventBus.getDefault().
                     remotePublish(param, tag, Result.class.getName(), 1000 * 60);
-            solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_CONTACT_UI,1000 * 5,0);
+            solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_CONTACT_UI, 1000 * 5, 0);
             TextView view = solo.getWaiter().waitForTextViewAppearAndGet("^关注$", 1000 * 5);
             if (view == null) {
                 // 公众号已经关注了
-                result.setError(new Error(Error.DUPLICATE_ATTENTION_OFFICE_ACCOUNT,"此公众号已经被关注"));
+                result.setError(new Error(Error.DUPLICATE_ATTENTION_OFFICE_ACCOUNT, "此公众号已经被关注"));
             } else {
                 Clicker clicker = solo.getClicker();
                 clicker.clickOnView(view);
-                if(solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_CHATTING_UI,1000 * 30,0)){
+                if (solo.getActivityUtils().waitForOnResume(WConstant.ACTIVITY_CHATTING_UI, 1000 * 30, 0)) {
                     result.setData("{\"success\"}");
                 } else {
                     Activity currentActivity = solo.getActivityUtils().getCurrentActivity();
                     XLogger.d("currentActivity = " + currentActivity.getClass().getName());
-                    result.setError(new Error(Error.ACCOUNT_FOLLOW_FAILED,"关注公众号失败!"));
+                    result.setError(new Error(Error.ACCOUNT_FOLLOW_FAILED, "关注公众号失败!"));
                 }
             }
             solo.sleep(1000);
             return result;
         } catch (Exception e) {
             XLogger.e(e);
-            result.setError(new Error(Error.OTHER,e.getMessage()));
+            result.setError(new Error(Error.OTHER, e.getMessage()));
             return result;
         } finally {
             solo.getActivityUtils().finishOpenedActivities();

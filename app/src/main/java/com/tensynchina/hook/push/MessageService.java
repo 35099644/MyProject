@@ -89,7 +89,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
         }
     }
 
-    private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"丁香园\\\"]}\"}}";
+    private static final String tag1  ="{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":1,\"taskId\":\"abc\",\"json\":\"{\\\"keyDes\\\":[\\\"阿里技术\\\"]}\"}}";
     private static final String tag2 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":2,\"taskId\":\"123\",\"json\":\"{\\\"keyDes\\\":\\\"飞思卡尔\\\",\\\"time\\\":1500652800}\"}}";
     private static final String tag3 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":3,\"taskId\":\"1500652800\",\"json\":\"{\\\"keyDes\\\":\\\"丁香园\\\",\\\"time\\\":1512000000}\"}}";
     private static final String tag4 = "{\"code\":0,\"param\":{\"packageName\":\"com.tencent.mm\",\"taskTag\":4,\"taskId\":\"111\",\"json\":\"{\\\"url\\\":\\\"https://mp.weixin.qq.com/s?__biz=MzA4NjM4NTUxNw==&mid=2657164513&idx=1&sn=4f3fc664bca18e150beb4da3efdea90f&scene=0#wechat_redirect\\\"}\"}}";
@@ -191,7 +191,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
         String msg = message.getMessage();
         Logger.d("MessageService 收到了从pushService发送的消息： uuid:" + uuid + " msg : " + msg);
         try {
-            String relMsg = null;
+            String relMsg;
             if (msg.startsWith("/mnt/sdcard/")) {
                 relMsg = IOUtils.fileToString(msg);
             } else {

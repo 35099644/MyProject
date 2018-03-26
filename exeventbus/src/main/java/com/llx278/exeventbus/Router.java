@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -17,7 +18,6 @@ import com.llx278.exeventbus.remote.TransportLayer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -132,11 +133,11 @@ public class Router implements Receiver {
 
     private final ArrayList<EventHolder> mStickyEventList = new ArrayList<>();
 
-    public Router(Context context, EventBus eventBus) {
+    Router(Context context, EventBus eventBus) {
         IMockPhysicalLayer physicalLayer = new MockPhysicalLayer(context);
         mTransportLayer = new TransportLayer(physicalLayer);
         mTransportLayer.setOnReceiveListener(this);
-        mExecutor = Executors.newCachedThreadPool();
+        mExecutor = Executors.newCachedThreadPool(new RouterThread());
         mEventBus = eventBus;
 
         mMessageObserverList.add(new AddEventListHandler());
@@ -174,6 +175,7 @@ public class Router implements Receiver {
         // 先判断此事件是否已经被其他的进程注册了
         long leftTime = timeout;
         if (addressList.isEmpty()) {
+            ELogger.d("没有找到此事件: " + event);
             // 没有找到此事件，则发送一次广播，更新一下已经保存的事件列表，因为无法保证进程启动的顺序，
             // 所以此刻保存的并非是最新的状态
             long startTime = SystemClock.uptimeMillis();
@@ -188,7 +190,7 @@ public class Router implements Receiver {
 
             addressList = getAddressOf(event);
             if (addressList.isEmpty()) {
-                Log.e(TAG, "此事件还没有被其他进程注册!");
+                ELogger.i(TAG, "此事件还没有被其他进程注册!");
                 return null;
             }
             // 计算一下查询事件花了多少时间
@@ -294,7 +296,7 @@ public class Router implements Receiver {
         mTransportLayer.sendBroadcast(message);
     }
 
-    public ArrayList<String> getAddressOf(Event event) {
+    ArrayList<String> getAddressOf(Event event) {
         ArrayList<String> addressList = new ArrayList<>();
         Set<Map.Entry<String, CopyOnWriteArrayList<Event>>> entries = mSubscribeEventList.entrySet();
         for (Map.Entry<String, CopyOnWriteArrayList<Event>> entry : entries) {
@@ -681,6 +683,17 @@ public class Router implements Receiver {
                     ", mEventObj=" + mEventObj +
                     ", mTimeout=" + mTimeout +
                     '}';
+        }
+    }
+    private class RouterThread implements ThreadFactory {
+
+        private static final String NAME = "router_thread-";
+        private int mNum = 0;
+
+        @Override
+        public Thread newThread(@NonNull Runnable r) {
+            mNum++;
+            return new Thread(r,NAME + mNum);
         }
     }
 }

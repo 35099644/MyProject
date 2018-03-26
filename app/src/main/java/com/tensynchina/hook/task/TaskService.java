@@ -52,13 +52,17 @@ public class TaskService extends Service {
     @Subscriber(tag = Constant.RECEIVE_MESSAGE_TAG,model = ThreadModel.HANDLER,remote = true)
     public void receiveMessage(Message message) {
 
-        String uuid = message.getUuid();
-        String msg = message.getMessage();
-        Logger.d("接收到了一个message : uuid : " + uuid + " : " + msg.toString());
-        Task task = JSON.parseObject(msg,Task.class);
-        // 每一个任务都要保存这个uuid，因为当这个任务执行结束需要这个uuid把任务发送回去
-        task.getParam().setAddressUuid(uuid);
-        mTaskExecutor.execute(task);
+        try {
+            String uuid = message.getUuid();
+            String msg = message.getMessage();
+            Logger.d("接收到了一个message : uuid : " + uuid + " : " + msg.toString());
+            Task task = JSON.parseObject(msg,Task.class);
+            // 每一个任务都要保存这个uuid，因为当这个任务执行结束需要这个uuid把任务发送回去
+            task.getParam().setAddressUuid(uuid);
+            mTaskExecutor.execute(task);
+        } catch (Exception e) {
+            Logger.e(e,"");
+        }
     }
 
     @Override

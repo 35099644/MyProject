@@ -16,10 +16,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class PushSender extends Thread {
     private final LinkedBlockingQueue<Result> sPushTask = new LinkedBlockingQueue<>();
 
-    public PushSender() {
+    PushSender() {
     }
 
-    public void addPushMessage(Result result) {
+    void addPushMessage(Result result) {
         sPushTask.add(result);
     }
 
@@ -32,11 +32,13 @@ public class PushSender extends Thread {
                 Result result = sPushTask.take();
                 String tag = Constant.PUSH_MESSAGE_TAG;
                 String returnClassName = void.class.getName();
-                long timeout = 1000 * 2;
+                long timeout = 1000 * 10;
                 ExEventBus.getDefault().remotePublish(result, tag, returnClassName, timeout);
-            } catch (InterruptedException | TimeoutException e) {
+            } catch (InterruptedException e) {
                 XLogger.e(e);
                 break;
+            } catch (TimeoutException e) {
+                XLogger.e(e);
             }
         }
     }

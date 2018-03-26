@@ -24,12 +24,12 @@ public class ActivityUtils {
         }
     }
 
-    public void addReplacedBundle(String activityName, Bundle bundle) {
-        mMyInst.addReplacedBundle(activityName,bundle);
+    public void addActivityLifeObserver(ActivityLifeCycleObserver observer) {
+        mMyInst.addActivityLifeCycleObserver(observer);
     }
 
-    public void removeReplacedBundle(String activityName){
-        mMyInst.removeReplacedBundle(activityName);
+    public void removeActivityLifeObserver(ActivityLifeCycleObserver observer) {
+        mMyInst.removeActivityLifeCycleObserver(observer);
     }
 
     /**
