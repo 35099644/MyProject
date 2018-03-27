@@ -43,6 +43,8 @@ public class TransportLayer implements ITransportLayer {
         mMockPhysicalLayer.destroy();
     }
 
+
+
     @Override
     public void send(final String address, final Bundle message, final long timeout)
             throws TimeoutException {
@@ -51,7 +53,9 @@ public class TransportLayer implements ITransportLayer {
         // 最好的形式是将这个id作为message的消息头，但是这里用的bundle，无法做字符串的拼接
         // 因此，这里存在的隐患就是如果message中存在着某个字段与KEY_ID相同的话会导致覆盖掉消息体的内容
         // 目前只能将KEY_ID这个字符串尽量设计的复杂一些，但实际上key都应该是有意义的字符串.
+
         message.putString(KEY_ID, id);
+
         mMockPhysicalLayer.send(address,message);
         CountDownLatch signal = new CountDownLatch(1);
         mSignalMap.put(id,signal);
@@ -87,6 +91,7 @@ public class TransportLayer implements ITransportLayer {
         // 防止干扰上层的业务
         String id = message.getString(KEY_ID);
         if (!TextUtils.isEmpty(id)) {
+
             sendAck(where,id);
             message.putString(KEY_ID,null);
         }
