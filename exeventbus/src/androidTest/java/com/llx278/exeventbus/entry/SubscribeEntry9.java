@@ -59,6 +59,7 @@ public class SubscribeEntry9 {
     @Subscriber(tag = "event9_SubscribeEntry9",model = ThreadModel.MAIN,type = Type.BLOCK_RETURN,remote = true)
     public String testMethod2(Event9 event9) {
         assertNotNull(event9);
+        mTestMethod2Tag = event9.getMsg();
         return "return_" + event9.getMsg();
     }
 

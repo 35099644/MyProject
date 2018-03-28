@@ -6,6 +6,15 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         >
+        <service android:name=".remote.RouteService"
+            android:process=":exeventbus_bd"
+            android:exported="true"
+            >
+            <intent-filter>
+                <action android:name="com.llx278.exeventbus.sync"/>
+            </intent-filter>
+        </service>
+
         <service
             android:name=".remote.TestService1"
             android:process=":remote1" />
@@ -52,6 +61,9 @@
             />
         <service android:name=".TestService14"
             android:process=":remote14"
+            />
+        <service android:name=".remote.TestService15"
+            android:process=":remote15"
             />
 
     </application>

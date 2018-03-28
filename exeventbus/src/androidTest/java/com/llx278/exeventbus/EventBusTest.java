@@ -188,21 +188,6 @@ public class EventBusTest {
     }
 
     @Test
-    public void stickyPublishTest() throws Exception {
-        // 先直接发布一个粘滞事件
-        CountDownLatch doneSignal = new CountDownLatch(3);
-        Event1 event1 = new Event1("event1");
-        Event3 event3 = new Event3("event3");
-        mEventBus.stickyPublish(event1,"event1");
-        mEventBus.stickyPublish(event3,"event3");
-        SubscribeEntry1 entry1 = new SubscribeEntry1(doneSignal);
-        mEventBus.register(entry1);
-        if(!doneSignal.await(1,TimeUnit.SECONDS)){
-            throw new TimeoutException("等待粘滞事件执行超时");
-        }
-    }
-
-    @Test
     public void query() {
         SubscribeEntry3 subscribeEntry3 = new SubscribeEntry3(null);
         mEventBus.register(subscribeEntry3);

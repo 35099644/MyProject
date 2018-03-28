@@ -40,6 +40,7 @@ public class TestService5 extends Service implements Receiver {
 
         @Override
         public String getBroadcastStr() throws RemoteException {
+            Log.d("main","getBroadcastStr!!!!! + " + mBroadcastStr);
             return mBroadcastStr;
         }
 

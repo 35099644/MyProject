@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.llx278.exeventbus.entry.SubscribeEntry7;
+import com.llx278.exeventbus.entry.SubscribeEntry9;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,15 +23,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class TestService9 extends Service {
 
     private Router mRouter;
+    private SubscribeEntry9 mEntry9;
 
     private IRouterInteractInterface.Stub mBinder = new IRouterInteractInterface.Stub() {
         @Override
         public Event[] getAddRegisterEventList(String address) throws RemoteException {
-            ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> subScribeEventList = mRouter.getSubScribeEventList();
-            CopyOnWriteArrayList<Event> events = subScribeEventList.get(address);
-            if (events != null) {
-                return  events.toArray(new Event[0]);
-            }
             return null;
         }
 
@@ -90,26 +87,15 @@ public class TestService9 extends Service {
     public void onCreate() {
         super.onCreate();
         Log.d("main","testService9 onCreate");
-        new Thread(){
-            @Override
-            public void run() {
-                EventBus eventBus = new EventBus();
-                mRouter = new Router(TestService9.this,eventBus);
-                SubscribeEntry7 subscribeEntry7 = new SubscribeEntry7(null);
-                ArrayList<Event> addEventList = eventBus.register(subscribeEntry7);
-                mRouter.add(addEventList);
-            }
-        }.start();
+        mEntry9 = new SubscribeEntry9();
+        EventBus eventBus = new EventBus();
+        eventBus.register(mEntry9);
+        mRouter = new Router(TestService9.this,eventBus);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        new Thread(){
-            @Override
-            public void run() {
-                mRouter.destroy();
-            }
-        }.start();
+        mRouter.destroy();
     }
 }

@@ -93,36 +93,8 @@ public class ExEventBusTest {
         ExEventBus.create(context);
         sExEventBus = ExEventBus.getDefault();
 
-        // 等待收到其他进程发送订阅事件
-         sAddress10 = sTest10.getAddress();
-         sAddress11 = sTest11.getAddress();
-         sAddress12 = sTest12.getAddress();
-         sAddress13 = sTest13.getAddress();
-        long endTime = SystemClock.uptimeMillis() + sDefaultTimeout;
-        // 如果2s内没有收到其他进程的
-        Router router = getRouterObj();
-        boolean received = false;
-        while (SystemClock.uptimeMillis() < endTime) {
-            Thread.sleep(50);
-            ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> subScribeEventList =
-                    router.getSubScribeEventList();
-            CopyOnWriteArrayList<Event> address10Events = subScribeEventList.get(sAddress10);
-            CopyOnWriteArrayList<Event> address11Events = subScribeEventList.get(sAddress11);
-            CopyOnWriteArrayList<Event> address12Events = subScribeEventList.get(sAddress12);
-            CopyOnWriteArrayList<Event> address13Events = subScribeEventList.get(sAddress13);
-            if (address10Events != null && !address10Events.isEmpty()&&
-                    address11Events != null && !address11Events.isEmpty()&&
-                    address12Events != null && !address12Events.isEmpty()&&
-                    address13Events != null && !address13Events.isEmpty()
-                    ) {
-                received = true;
-                break;
-            }
-        }
-        Log.d("main","received : " + received);
         sSubscribeEntry12 = new SubscribeEntry12();
         sExEventBus.register(sSubscribeEntry12);
-        assertTrue(received);
         addEventList();
         // 确保进程之间已经建立连接
         Thread.sleep(1000 * 5);
@@ -155,31 +127,6 @@ public class ExEventBusTest {
         sTest11.killSelf();
         sTest12.killSelf();
         sTest13.killSelf();
-
-        // 确定已经接收到了所有其他进程的退出消息
-        Router router = getRouterObj();
-        boolean destroy = false;
-        long endTime = SystemClock.uptimeMillis() + 1000 * 5;
-        while (SystemClock.uptimeMillis() < endTime) {
-            Thread.sleep(10);
-            ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> subScribeEventList =
-                    router.getSubScribeEventList();
-            CopyOnWriteArrayList<Event> address10Events = subScribeEventList.get(sAddress10);
-            CopyOnWriteArrayList<Event> address11Events = subScribeEventList.get(sAddress11);
-            CopyOnWriteArrayList<Event> address12Events = subScribeEventList.get(sAddress12);
-            CopyOnWriteArrayList<Event> address13Events = subScribeEventList.get(sAddress13);
-            if (address10Events == null || address10Events.isEmpty()&&
-                    address11Events == null || address11Events.isEmpty()&&
-                    address12Events == null || address12Events.isEmpty()&&
-                    address13Events == null || address13Events.isEmpty()
-                    ) {
-                destroy = true;
-                break;
-            }
-        }
-
-        Log.d("main","destroy : "+ destroy);
-        assertTrue(destroy);
         ExEventBus.destroy();
     }
 
@@ -268,38 +215,6 @@ public class ExEventBusTest {
     }
 
     /**
-     * 测试进程之间的粘滞事件
-     */
-    @Test
-    public void stickyPublishEvent() throws Exception {
-
-        String msg = "event8_sticky_return";
-        Event8 event8 = new Event8(msg);
-        String tag = "event8_sticky";
-        // 先发送一个粘滞事件
-        sExEventBus.stickyRemotePublish(event8,tag,2000);
-        Thread.sleep(3000);
-        // 启动TestService14
-        Context context = InstrumentationRegistry.getTargetContext();
-        Intent service14Intent = new Intent(context,TestService14.class);
-        IBinder binder = sServiceRule.bindService(service14Intent);
-        IRouterInteractInterface test14 = IRouterInteractInterface.Stub.asInterface(binder);
-        // 启动进程以后就应该执行了注册的方法
-        long endtime = SystemClock.uptimeMillis() + 1000 * 5;
-        boolean found = false;
-        while (SystemClock.uptimeMillis() < endtime) {
-            String s = test14.testMethod1Result();
-            if (!TextUtils.isEmpty(s)) {
-                found = true;
-                break;
-            }
-        }
-        assertTrue(found);
-        assertEquals(msg,test14.testMethod1Result());
-        test14.stop();
-    }
-
-    /**
      * 测试进程彼此之间互相发送消息
      */
     @Test
@@ -307,7 +222,7 @@ public class ExEventBusTest {
 
         sExEventBus.register(this);
 
-        int count = 1000;
+        int count = 100000;
 
         sTest10.start(count);
         sTest11.start(count);
@@ -326,6 +241,7 @@ public class ExEventBusTest {
                 String uuid = UUID.randomUUID().toString();
                 String msg = body + "#" + M_TAG + "#" + uuid;
                 newHolder.event.setMsg(msg);
+                //Log.d("main","ExeventBus 0 event : " + newHolder.event.toString() + " tag : " + newHolder.tag);
                 sExEventBus.remotePublish(newHolder.event,newHolder.tag,newHolder.returnClassName,1000 * 2);
                 boolean received = false;
                 long endTimeReturn = SystemClock.uptimeMillis() + 1000 * 2;
@@ -364,9 +280,11 @@ public class ExEventBusTest {
                 }
             } else {
                 Holder holder = sEventTemp.get(index);
+                Holder newHolder = holder.deepCopy();
                 String msg = UUID.randomUUID().toString();
-                holder.event.setMsg(msg);
-                Object o = sExEventBus.remotePublish(holder.event, holder.tag, holder.returnClassName, 1000 * 2);
+                newHolder.event.setMsg(msg);
+                //Log.d("main","exeventBus - event : " + newHolder.event.toString() + "tag : " + newHolder.tag);
+                Object o = sExEventBus.remotePublish(newHolder.event, newHolder.tag, newHolder.returnClassName, 1000 * 2);
                 Assert.assertNotNull(o);
                 Assert.assertEquals(o.getClass(),String.class);
                 Assert.assertEquals("return_" + msg,o.toString());

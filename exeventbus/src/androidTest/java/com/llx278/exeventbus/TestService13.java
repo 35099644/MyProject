@@ -180,6 +180,7 @@ public class TestService13 extends Service {
                         String uuid = UUID.randomUUID().toString();
                         String msg = body + "#" + mTag + "#" + uuid;
                         newHolder.event.setMsg(msg);
+                        Log.d("main","TestService13 0 event : " + newHolder.event.toString());
                         try {
                             mExEventBus.remotePublish(newHolder.event,newHolder.tag,newHolder.returnClassName,1000 * 2);
                         } catch (TimeoutException e) {
@@ -205,6 +206,7 @@ public class TestService13 extends Service {
                                     break;
                                 }
                             }
+
                             Assert.assertTrue(received);
                             Assert.assertEquals(body,value10);
                             Assert.assertEquals(body,value11);
@@ -221,6 +223,7 @@ public class TestService13 extends Service {
                         String msg = UUID.randomUUID().toString();
                         newHolder.event.setMsg(msg);
                         Object o = null;
+                        Log.d("main","TestService13 - event : " + newHolder.event.toString());
                         try {
                             o = mExEventBus.remotePublish(newHolder.event, newHolder.tag, newHolder.returnClassName, 1000 * 2);
                         } catch (TimeoutException e) {
@@ -258,7 +261,7 @@ public class TestService13 extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d("main1","testService13 onCreate");
+        Log.d("main","testService13 onCreate");
         Intent service10Intent = new Intent(this,TestService10.class);
         bindService(service10Intent,mService10Connection, Context.BIND_AUTO_CREATE);
         Intent service11Intent = new Intent(this,TestService11.class);
@@ -268,17 +271,11 @@ public class TestService13 extends Service {
 
         addEventList();
         mExecutor = Executors.newCachedThreadPool();
-        new Thread(){
-            @Override
-            public void run() {
-                ExEventBus.create(TestService13.this);
-                mExEventBus = ExEventBus.getDefault();
-                mSubscribeEntry11 = new SubscribeEntry11(null);
-                mExEventBus.register(mSubscribeEntry11);
-                mExEventBus.register(TestService13.this);
-            }
-        }.start();
-
+        ExEventBus.create(TestService13.this);
+        mExEventBus = ExEventBus.getDefault();
+        mSubscribeEntry11 = new SubscribeEntry11(null);
+        mExEventBus.register(mSubscribeEntry11);
+        mExEventBus.register(TestService13.this);
     }
 
     @Subscriber(tag = mTag,type = Type.DEFAULT,model = ThreadModel.POOL,remote = true)

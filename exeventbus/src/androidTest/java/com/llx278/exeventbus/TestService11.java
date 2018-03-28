@@ -169,7 +169,7 @@ public class TestService11 extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d("main1","testService11 onCreate");
+        Log.d("main","testService11 onCreate");
 
         Intent service11Intent = new Intent(this,TestService10.class);
         bindService(service11Intent,mService10Connection, Context.BIND_AUTO_CREATE);
@@ -179,16 +179,11 @@ public class TestService11 extends Service {
         bindService(service13Intent,mService13Connection,Context.BIND_AUTO_CREATE);
         addEventList();
         mExecutor = Executors.newCachedThreadPool();
-        new Thread(){
-            @Override
-            public void run() {
-                ExEventBus.create(TestService11.this);
-                mExEventBus = ExEventBus.getDefault();
-                mSubscribeEntry9 = new SubscribeEntry9(null);
-                mExEventBus.register(mSubscribeEntry9);
-                mExEventBus.register(TestService11.this);
-            }
-        }.start();
+        ExEventBus.create(TestService11.this);
+        mExEventBus = ExEventBus.getDefault();
+        mSubscribeEntry9 = new SubscribeEntry9(null);
+        mExEventBus.register(mSubscribeEntry9);
+        mExEventBus.register(TestService11.this);
     }
 
     @Subscriber(tag = mTag,type = Type.DEFAULT,model = ThreadModel.POOL,remote = true)
@@ -228,6 +223,8 @@ public class TestService11 extends Service {
                         String uuid = UUID.randomUUID().toString();
                         String msg = body + "#" + mTag + "#" + uuid;
                         newHolder.event.setMsg(msg);
+                        Log.d("main","TestService11 0 event : " + newHolder.event.toString());
+
                         try {
                             mExEventBus.remotePublish(newHolder.event,newHolder.tag,newHolder.returnClassName,1000 * 2);
                         } catch (TimeoutException e) {
@@ -268,6 +265,7 @@ public class TestService11 extends Service {
                         Holder newHolder = holder.deepCopy();
                         String msg = UUID.randomUUID().toString();
                         newHolder.event.setMsg(msg);
+                        Log.d("main","TestService11 - event : " + newHolder.event.toString());
                         Object o = null;
                         try {
                             o = mExEventBus.remotePublish(newHolder.event, newHolder.tag, newHolder.returnClassName, 1000 * 2);

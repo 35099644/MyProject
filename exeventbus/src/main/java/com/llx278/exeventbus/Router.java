@@ -10,6 +10,7 @@ import android.util.Log;
 
 import com.llx278.exeventbus.exception.IllegalRemoteArgumentException;
 import com.llx278.exeventbus.exception.TimeoutException;
+import com.llx278.exeventbus.remote.Address;
 import com.llx278.exeventbus.remote.IMockPhysicalLayer;
 import com.llx278.exeventbus.remote.ITransportLayer;
 import com.llx278.exeventbus.remote.MockPhysicalLayer;
@@ -23,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,26 +42,17 @@ public class Router implements Receiver {
      * 此key代表了每一个消息的类型
      */
     private static final String KEY_TYPE = "type";
+
     /**
      * 此value代表向其他进程查询已经注册的订阅事件
      */
     private static final String TYPE_VALUE_OF_QUERY = "query_event";
-    /**
-     * 此value代表发送此条消息的进程已经准备退出了
-     */
-    private static final String TYPE_VALUE_OF_DESTROY = "destroy_event";
+
     /**
      * 此value代表查询已经注册的订阅事件的结果
      */
     private static final String TYPE_VALUE_OF_QUERY_RESULT = "query_event_result";
-    /**
-     * 此value代表添加一个订阅事件列表
-     */
-    private static final String TYPE_VALUE_OF_ADD = "add_event";
-    /**
-     * 此value代表移除一个订阅事件列表
-     */
-    private static final String TYPE_VALUE_OF_REMOVE = "remove_event";
+
     /**
      * 向其他进程的总线上发布一个订阅事件
      */
@@ -70,18 +61,11 @@ public class Router implements Receiver {
      * 向其他进程的总线上发布此订阅事件执行后返回值
      */
     private static final String TYPE_VALUE_OF_PUBLISH_RETURN_VALUE = "publish_event_value";
+
     /**
      * 此key封装了查询订阅事件的列表
      */
     private static final String KEY_QUERY_LIST = "query_list";
-    /**
-     * 此key封装了添加订阅事件的列表
-     */
-    private static final String KEY_ADD_LIST = "add_list";
-    /**
-     * 此key封装了解除订阅事件的列表
-     */
-    private static final String KEY_REMOVE_LIST = "remove_list";
     /**
      * 此key封装了发布事件的参数
      */
@@ -101,7 +85,7 @@ public class Router implements Receiver {
     /**
      * 此key封装了每个消息唯一标志
      */
-    private static final String KEY_ID = "id";
+    private static final String KEY_ID = "router_id";
 
     private static long sDefaultTimeout = 1000 * 5;
 
@@ -110,8 +94,6 @@ public class Router implements Receiver {
     private ExecutorService mExecutor;
 
     private EventBus mEventBus;
-
-    private final Object mWaitLock = new Object();
 
     /**
      * 保存了对从其他进程发送的消息进行处理的类的列表
@@ -126,12 +108,12 @@ public class Router implements Receiver {
             new ConcurrentHashMap<>();
 
     /**
-     * 保存了每个进程已经订阅事件的列表
+     * 保存了每个消息所对应那一时刻的事件列表。
+     * 我没有考虑缓存所有进程的事件列表的原因是每个进程随时都有可能被杀死，这样的缓存列表很难维护，到不如
+     * 每次都做一次查询，这样虽然效率会低点，但能避免很多bug。
      */
-    private ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> mSubscribeEventList =
+    private ConcurrentHashMap<String,EventListHolder> mSubscribeEventListSnapshot =
             new ConcurrentHashMap<>();
-
-    private final ArrayList<EventHolder> mStickyEventList = new ArrayList<>();
 
     Router(Context context, EventBus eventBus) {
         IMockPhysicalLayer physicalLayer = new MockPhysicalLayer(context);
@@ -140,25 +122,24 @@ public class Router implements Receiver {
         mExecutor = Executors.newCachedThreadPool(new RouterThread());
         mEventBus = eventBus;
 
-        mMessageObserverList.add(new AddEventListHandler());
-        mMessageObserverList.add(new RemoveEventListHandler());
         mMessageObserverList.add(new ResultHandler());
         mMessageObserverList.add(new ExecuteHandler());
         mMessageObserverList.add(new QueryHandler());
         mMessageObserverList.add(new QueryResultHandler());
-        mMessageObserverList.add(new DestroyHandler());
-
-        // 向其他进程发送一次查询消息，请求其他已经注册了EventBus的进程中所有Event列表
-        queryEventList();
     }
 
-    private void queryEventList() {
-        Bundle message = new Bundle();
-        message.putString(KEY_ID, UUID.randomUUID().toString());
-        message.putString(KEY_TYPE, TYPE_VALUE_OF_QUERY);
-        mTransportLayer.sendBroadcast(message);
+    ArrayList<Integer> getAvailableProcessId() {
+        String where = Address.createOwnAddress().toString();
+        ArrayList<String> availableAddress = mTransportLayer.getAvailableAddress(where);
+        ArrayList<Integer> processIdList = new ArrayList<>();
+        for (String address : availableAddress) {
+            Address address1 = Address.toAddress(address);
+            if (address1 != null) {
+                processIdList.add(address1.getPid());
+            }
+        }
+        return processIdList;
     }
-
 
     /**
      * 将此事件发送到其他的进程中执行
@@ -170,70 +151,53 @@ public class Router implements Receiver {
      */
     Object route(Object eventObject, String tag, String returnClassName, long timeout)
             throws TimeoutException {
-        Event event = new Event(tag, eventObject.getClass().getName(), returnClassName, true);
-        ArrayList<String> addressList = getAddressOf(event);
-        // 先判断此事件是否已经被其他的进程注册了
-        long leftTime = timeout;
-        if (addressList.isEmpty()) {
-            ELogger.d("没有找到此事件: " + event);
-            // 没有找到此事件，则发送一次广播，更新一下已经保存的事件列表，因为无法保证进程启动的顺序，
-            // 所以此刻保存的并非是最新的状态
-            long startTime = SystemClock.uptimeMillis();
-            queryEventList();
-            // 等待返回结果
-            synchronized (mWaitLock) {
-                try {
-                    mWaitLock.wait(timeout);
-                } catch (InterruptedException ignore) {
-                }
-            }
+        String where = Address.createOwnAddress().toString();
+        ArrayList<String> availableAddress = mTransportLayer.getAvailableAddress(where);
 
-            addressList = getAddressOf(event);
-            if (addressList.isEmpty()) {
-                ELogger.i(TAG, "此事件还没有被其他进程注册!");
-                return null;
-            }
-            // 计算一下查询事件花了多少时间
-            long elapsedTime = SystemClock.uptimeMillis() - startTime;
-            leftTime = timeout - elapsedTime;
-            if (leftTime <= 10) {
-                throw new TimeoutException("query events from other process cost too much time, " +
-                        "you should increase the duration of timeout!");
-            }
+        if (availableAddress == null || availableAddress.isEmpty()) {
+            ELogger.e("no available address",null);
             return null;
         }
+        long currentTime = SystemClock.uptimeMillis();
+        String id = UUID.randomUUID().toString();
+        CountDownLatch signal = new CountDownLatch(availableAddress.size());
+        mSubscribeEventListSnapshot.put(id,new EventListHolder(signal));
 
+        // 发送消息
+        Bundle message = new Bundle();
+        message.putString(KEY_ID,id);
+        message.putString(KEY_TYPE,TYPE_VALUE_OF_QUERY);
+        mTransportLayer.sendBroadcast(message);
+
+        try {
+            if (!signal.await(timeout,TimeUnit.MILLISECONDS)) {
+                mSubscribeEventListSnapshot.remove(id);
+                throw new TimeoutException("wait for other process respond timeout");
+            }
+        } catch (InterruptedException ignore) {
+        }
+        Event event = new Event(tag, eventObject.getClass().getName(), returnClassName, true);
+        ConcurrentHashMap<String, ArrayList<Event>> eventList = mSubscribeEventListSnapshot.get(id).mEventList;
+        ArrayList<String> eventAddressList = getAddressOf(event,eventList);
+        if (eventAddressList.isEmpty()) {
+            return null;
+        }
+        mSubscribeEventListSnapshot.remove(id);
+        long elapsedTime = SystemClock.uptimeMillis() - currentTime;
+        long leftTime = timeout - elapsedTime;
+        if (leftTime <= 10) {
+            return null;
+        }
         if (returnClassName.equals(void.class.getName())) {
-            for (String address : addressList) {
+            for (String address : eventAddressList) {
                 route(address, eventObject, tag, returnClassName, leftTime);
             }
             return null;
         } else {
-            String address = addressList.get(0);
+            String address = eventAddressList.get(0);
             return route(address, eventObject, tag, returnClassName, leftTime);
         }
     }
-
-    /**
-     * 远程发布一个粘滞事件,粘滞事件的返回值没有意义
-     * 如果此事件已经注册了，那么就直接执行，如果没有注册，那么当接收到注册此事件的进程发送的注册信息以后
-     * 立即执行，而此方法并不会等待其他进程的执行结果
-     */
-    void stickyRoute(Object eventObject, String tag, long timeout) throws TimeoutException {
-
-        String returnClassName = void.class.getName();
-        Event event = new Event(tag, eventObject.getClass().getName(), returnClassName, true);
-        ArrayList<String> addressList = getAddressOf(event);
-        if (!addressList.isEmpty()) {
-            route(eventObject, tag, returnClassName, timeout);
-        }
-
-        synchronized (mStickyEventList) {
-            EventHolder holder = new EventHolder(event, eventObject, timeout);
-            mStickyEventList.add(holder);
-        }
-    }
-
 
     /**
      * 将事件发送到指定进程执行
@@ -244,32 +208,6 @@ public class Router implements Receiver {
             throws TimeoutException {
         PublishHandler publishHandler = new PublishHandler(address);
         return publishHandler.publishToRemote(eventObject, tag, returnClassName, timeout);
-    }
-
-    public void destroy() {
-        mExecutor.shutdown();
-        mExecutor = null;
-        Bundle message = new Bundle();
-        message.putString(KEY_TYPE, TYPE_VALUE_OF_DESTROY);
-        mTransportLayer.sendBroadcast(message);
-        mTransportLayer.destroy();
-    }
-
-    /**
-     * 通知其他进程的EventBus，此进程的EventBus发生了一个新的注册事件
-     *
-     * @param newEventArrayList 新注册的event事件列表
-     */
-    public void add(ArrayList<Event> newEventArrayList) {
-
-        Bundle message = new Bundle();
-        // 封装消息类型
-        message.putString(KEY_TYPE, TYPE_VALUE_OF_ADD);
-        // 封装订阅事件的列表
-        message.putParcelableArrayList(KEY_ADD_LIST, filterNoRemoteEventList(newEventArrayList));
-        message.putString(KEY_ID, UUID.randomUUID().toString());
-        // 发送给所有已经注册了总线的进程
-        mTransportLayer.sendBroadcast(message);
     }
 
     private ArrayList<Event> filterNoRemoteEventList(ArrayList<Event> newEventArrayList) {
@@ -283,24 +221,14 @@ public class Router implements Receiver {
         return newEventArrayList;
     }
 
-    /**
-     * 通知其他进程的EventBus，此进程的EventBus移除了一个注册事件
-     *
-     * @param oldEventArrayList 已经移除的注册事件列表
-     */
-    public void remove(ArrayList<Event> oldEventArrayList) {
-        Bundle message = new Bundle();
-        message.putString(KEY_TYPE, TYPE_VALUE_OF_REMOVE);
-        message.putParcelableArrayList(KEY_REMOVE_LIST, filterNoRemoteEventList(oldEventArrayList));
-        message.putString(KEY_ID, UUID.randomUUID().toString());
-        mTransportLayer.sendBroadcast(message);
-    }
-
-    ArrayList<String> getAddressOf(Event event) {
+    private ArrayList<String> getAddressOf(Event event, ConcurrentHashMap<String, ArrayList<Event>> evenList) {
         ArrayList<String> addressList = new ArrayList<>();
-        Set<Map.Entry<String, CopyOnWriteArrayList<Event>>> entries = mSubscribeEventList.entrySet();
-        for (Map.Entry<String, CopyOnWriteArrayList<Event>> entry : entries) {
-            CopyOnWriteArrayList<Event> eventValueList = entry.getValue();
+        if (evenList == null) {
+            return addressList;
+        }
+        Set<Map.Entry<String, ArrayList<Event>>> entries = evenList.entrySet();
+        for (Map.Entry<String, ArrayList<Event>> entry : entries) {
+            ArrayList<Event> eventValueList = entry.getValue();
             for (Event testedEvent : eventValueList) {
                 if (testedEvent.equals(event)) {
                     addressList.add(entry.getKey());
@@ -308,10 +236,6 @@ public class Router implements Receiver {
             }
         }
         return addressList;
-    }
-
-    ConcurrentHashMap<String, CopyOnWriteArrayList<Event>> getSubScribeEventList() {
-        return mSubscribeEventList;
     }
 
     @Override
@@ -328,6 +252,10 @@ public class Router implements Receiver {
                 }
             });
         }
+    }
+
+    public void destroy() {
+        mTransportLayer.destroy();
     }
 
     /**
@@ -390,27 +318,18 @@ public class Router implements Receiver {
 
             if (returnClassName.equals(void.class.getName())) {
                 // 空类型直接发送，不需要等待返回值
-                try {
-                    mTransportLayer.send(mAddress, message, timeout);
-                } catch (TimeoutException e) {
-                    mSubscribeEventList.remove(mAddress);
-                    throw new TimeoutException(e);
-                }
+                mTransportLayer.send(mAddress, message, timeout);
             } else {
                 // 其他类型需要缓存执行的事件，等待执行结果的返回
                 mWaitingExecuteReturnValueMap.put(mId, this);
                 long currentTime = SystemClock.uptimeMillis();
-                try {
-                    mTransportLayer.send(mAddress, message, timeout);
-                } catch (TimeoutException e) {
-                    mSubscribeEventList.remove(mAddress);
-                    throw new TimeoutException(e);
-                }
+                mTransportLayer.send(mAddress, message, timeout);
                 long endTime = SystemClock.uptimeMillis();
                 long elapsedTime = endTime - currentTime;
                 long leftTimeout = timeout - elapsedTime;
                 try {
                     if (!mDoneSignal.await(leftTimeout, TimeUnit.MILLISECONDS)) {
+                        mWaitingExecuteReturnValueMap.remove(mId);
                         // 等待超时
                         throw new TimeoutException("wait publish result timeout!");
                     }
@@ -436,17 +355,14 @@ public class Router implements Receiver {
             String typeValue = message.getString(KEY_TYPE);
             if (TYPE_VALUE_OF_QUERY.equals(typeValue)) {
                 ArrayList<Event> allEvents = mEventBus.query();
+                String id = message.getString(KEY_ID);
                 Bundle valueMessage = new Bundle();
-                valueMessage.putString(KEY_ID, UUID.randomUUID().toString());
+                valueMessage.putString(KEY_ID, id);
                 valueMessage.putString(KEY_TYPE, TYPE_VALUE_OF_QUERY_RESULT);
+                valueMessage.setClassLoader(getClass().getClassLoader());
                 valueMessage.putParcelableArrayList(KEY_QUERY_LIST, filterNoRemoteEventList(allEvents));
                 try {
-                    try {
-                        mTransportLayer.send(where, valueMessage, sDefaultTimeout);
-                    } catch (TimeoutException e) {
-                        mSubscribeEventList.remove(where);
-                        throw new TimeoutException(e);
-                    }
+                    mTransportLayer.send(where, valueMessage, sDefaultTimeout);
                 } catch (TimeoutException e) {
                     ELogger.e(TAG, "send message[typeValue = " + typeValue + " allEvents = " +
                             allEvents + "]", e);
@@ -468,112 +384,13 @@ public class Router implements Receiver {
             String typeValue = message.getString(KEY_TYPE);
             if (TYPE_VALUE_OF_QUERY_RESULT.equals(typeValue)) {
                 ArrayList<Event> queryEvents = message.getParcelableArrayList(KEY_QUERY_LIST);
-                CopyOnWriteArrayList<Event> events = mSubscribeEventList.get(where);
+                String id = message.getString(KEY_ID);
+                EventListHolder eventListHolder = mSubscribeEventListSnapshot.get(id);
                 if (queryEvents != null) {
-                    if (events == null) {
-                        events = new CopyOnWriteArrayList<>();
-                    }
-                    events.addAllAbsent(queryEvents);
-                    mSubscribeEventList.put(where, events);
+                    eventListHolder.mEventList.put(where,queryEvents);
                 }
-
-                synchronized (mWaitLock) {
-                    mWaitLock.notify();
-                }
-
-                // 处理粘滞事件
-                synchronized (mStickyEventList) {
-                    for (Event event : events) {
-                        checkStickyList(event);
-                    }
-                }
+                eventListHolder.mSignal.countDown();
                 return true;
-            }
-            return false;
-        }
-    }
-
-    private void checkStickyList(Event event) {
-        Iterator<EventHolder> iterator = mStickyEventList.iterator();
-        while (iterator.hasNext()) {
-            final EventHolder holder = iterator.next();
-            if (holder.mEvent.equals(event)) {
-                executeEvent(holder);
-                iterator.remove();
-            }
-        }
-    }
-
-    private void executeEvent(final EventHolder holder) {
-        mExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Object eventObj = holder.mEventObj;
-                    String tag = holder.mEvent.getTag();
-                    String returnClassName = holder.mEvent.getReturnClassName();
-                    long timeout = holder.mTimeout;
-                    route(eventObj, tag, returnClassName, timeout);
-                } catch (TimeoutException e) {
-                    ELogger.e("执行sticky事件超时:" + holder, e);
-                }
-            }
-        });
-    }
-
-    /**
-     * 用来添加注册事件的类
-     */
-    private class AddEventListHandler implements MessageObserver {
-
-        @Override
-        public boolean handleMessage(String where, Bundle message) {
-
-            String typeValue = message.getString(KEY_TYPE);
-            if (TYPE_VALUE_OF_ADD.equals(typeValue)) {
-                // 接收到了一个订阅事件
-                ArrayList<Event> newEvents = message.getParcelableArrayList(KEY_ADD_LIST);
-                if (newEvents != null && !newEvents.isEmpty()) {
-                    CopyOnWriteArrayList<Event> events = mSubscribeEventList.get(where);
-                    if (events == null) {
-                        events = new CopyOnWriteArrayList<>();
-                    }
-                    events.addAllAbsent(newEvents);
-                    mSubscribeEventList.put(where, events);
-
-                    // 处理粘滞事件
-                    synchronized (mStickyEventList) {
-                        for (Event event : events) {
-                            checkStickyList(event);
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        }
-    }
-
-    /**
-     * 用来处理删除注册事件的类
-     */
-    private class RemoveEventListHandler implements MessageObserver {
-
-        @Override
-        public boolean handleMessage(String where, Bundle message) {
-            String typeValue = message.getString(KEY_TYPE);
-            if (TYPE_VALUE_OF_REMOVE.equals(typeValue)) {
-                // 接收到了一个解除订阅的时间
-                ArrayList<Event> unregisterEvents = message.getParcelableArrayList(KEY_REMOVE_LIST);
-                if (unregisterEvents != null && !unregisterEvents.isEmpty()) {
-                    CopyOnWriteArrayList<Event> events = mSubscribeEventList.get(where);
-                    if (events == null || events.isEmpty()) {
-                        ELogger.i(TAG, "got an empty event list when attempt to delete events " +
-                                "from subscribeEventList!");
-                        return true;
-                    }
-                    events.removeAll(unregisterEvents);
-                }
             }
             return false;
         }
@@ -612,7 +429,6 @@ public class Router implements Receiver {
                     try {
                         mTransportLayer.send(where, valueMessage, sDefaultTimeout);
                     } catch (TimeoutException e) {
-                        mSubscribeEventList.remove(where);
                         ELogger.e(TAG, "send message[typeValue = " + typeValue + " rturnvalue = " +
                                 returnValue + "]", e);
                     }
@@ -647,44 +463,6 @@ public class Router implements Receiver {
         }
     }
 
-    /**
-     * 处理进程退出事件
-     */
-    private class DestroyHandler implements MessageObserver {
-
-        @Override
-        public boolean handleMessage(String where, Bundle message) {
-
-            String typeValue = message.getString(KEY_TYPE);
-            if (TYPE_VALUE_OF_DESTROY.equals(typeValue)) {
-                // 删除此进程的所有event事件
-                mSubscribeEventList.remove(where);
-                return true;
-            }
-            return false;
-        }
-    }
-
-    private class EventHolder {
-        final Event mEvent;
-        final Object mEventObj;
-        final long mTimeout;
-
-        EventHolder(Event event, Object eventObj, long timeout) {
-            mEvent = event;
-            mEventObj = eventObj;
-            mTimeout = timeout;
-        }
-
-        @Override
-        public String toString() {
-            return "EventHolder{" +
-                    "mEvent=" + mEvent +
-                    ", mEventObj=" + mEventObj +
-                    ", mTimeout=" + mTimeout +
-                    '}';
-        }
-    }
     private class RouterThread implements ThreadFactory {
 
         private static final String NAME = "router_thread-";
@@ -693,7 +471,19 @@ public class Router implements Receiver {
         @Override
         public Thread newThread(@NonNull Runnable r) {
             mNum++;
+            if (mNum == Integer.MAX_VALUE) {
+                mNum = 0;
+            }
             return new Thread(r,NAME + mNum);
+        }
+    }
+
+    private class EventListHolder {
+        private final CountDownLatch mSignal;
+        private final ConcurrentHashMap<String,ArrayList<Event>> mEventList;
+        EventListHolder(CountDownLatch signal) {
+            mSignal = signal;
+            mEventList = new ConcurrentHashMap<>();
         }
     }
 }

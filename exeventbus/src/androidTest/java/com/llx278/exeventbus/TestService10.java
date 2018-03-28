@@ -185,6 +185,8 @@ public class TestService10 extends Service {
                         String uuid = UUID.randomUUID().toString();
                         String msg = body + "#" + mTag + "#" + uuid;
                         newHolder.event.setMsg(msg);
+                        Log.d("main","TestService10 0 event : " + newHolder.event.toString());
+
                         try {
                             mExEventBus.remotePublish(newHolder.event,newHolder.tag,newHolder.returnClassName,1000 * 2);
                         } catch (TimeoutException e) {
@@ -225,6 +227,7 @@ public class TestService10 extends Service {
                         Holder newHolder = holder.deepCopy();
                         String msg = UUID.randomUUID().toString();
                         newHolder.event.setMsg(msg);
+                        Log.d("main","TestService10 - event : " + newHolder.event.toString());
                         Object o = null;
                         try {
                             o = mExEventBus.remotePublish(newHolder.event, newHolder.tag, newHolder.returnClassName, 1000 * 2);
@@ -262,7 +265,7 @@ public class TestService10 extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d("main1","TestService10 onCreate");
+        Log.d("main","TestService10 onCreate");
 
         Intent service11Intent = new Intent(this,TestService11.class);
         bindService(service11Intent,mService11Connection, Context.BIND_AUTO_CREATE);
@@ -273,16 +276,11 @@ public class TestService10 extends Service {
 
         addEventList();
         mExecutor = Executors.newFixedThreadPool(50);
-        new Thread(){
-            @Override
-            public void run() {
-                ExEventBus.create(TestService10.this);
-                mExEventBus = ExEventBus.getDefault();
-                mSubscribeEntry8 = new SubscribeEntry8(null);
-                mExEventBus.register(mSubscribeEntry8);
-                mExEventBus.register(TestService10.this);
-            }
-        }.start();
+        ExEventBus.create(TestService10.this);
+        mExEventBus = ExEventBus.getDefault();
+        mSubscribeEntry8 = new SubscribeEntry8(null);
+        mExEventBus.register(mSubscribeEntry8);
+        mExEventBus.register(TestService10.this);
 
     }
 

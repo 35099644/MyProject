@@ -29,10 +29,6 @@ class EventBus {
      * 已经订阅的事件
      */
     private final Map<Event, CopyOnWriteArrayList<Subscription>> mSubscribedMap = new ConcurrentHashMap<>();
-    /**
-     * 缓存本地的粘滞事件
-     */
-    private final ArrayList<StickyHolder> mStickyEventList = new ArrayList<>();
 
 
     EventBus() {
@@ -91,28 +87,7 @@ class EventBus {
             }
             aClass = aClass.getSuperclass();
         }
-        checkStickyEvent();
         return newAddedList;
-    }
-
-    private void checkStickyEvent() {
-        Set<Event> events = mSubscribedMap.keySet();
-        // 判断一下本地粘滞事件
-        synchronized (mStickyEventList) {
-            for (Event event : events) {
-                Iterator<StickyHolder> iterator = mStickyEventList.iterator();
-                while (iterator.hasNext()) {
-                    StickyHolder next = iterator.next();
-                    if (next.mEvent.equals(event)) {
-                        // 这里订阅事件的线程模型如果是在发布线程执行的话，那就会导致
-                        // 这里发生阻塞
-                        publish(next.mEvent, next.mEventObj);
-                        // 移除已经发布完成的粘滞事件
-                        iterator.remove();
-                    }
-                }
-            }
-        }
     }
 
     private void checkRemoteParam(Class<?> paramType, Class<?> returnType) {
@@ -250,34 +225,6 @@ class EventBus {
             }
         }
         return null;
-    }
-
-    /**
-     * 向EventBus上面发布一个粘滞事件，粘滞事件不支持返回值
-     * 注意：不要尝试粘滞发布一个Type为:{@link Type#BLOCK_RETURN}事件，因为当对应事件在总线上注册之后会
-     * 立即执行，如果TYpe为{@link Type#BLOCK_RETURN}的话会阻塞注册的过程，如果注册的过程是在主线程执行的话
-     * 那么可能会引起页面无响应.
-     * @param eventObj 待执行的发布对象
-     * @param tag      这个事件的标志
-     */
-    public void stickyPublish(Object eventObj, String tag) {
-        if (eventObj == null || TextUtils.isEmpty(tag)) {
-            ELogger.e("LocalEventBus.publish(Object,String,Class) param Object or tag or " +
-                    "class is null!!", null);
-            return;
-        }
-        String returnClassName = void.class.getName();
-        Event event = new Event(tag, eventObj.getClass().getName(), returnClassName, false);
-        CopyOnWriteArrayList<Subscription> subscriptionList = mSubscribedMap.get(event);
-        if (subscriptionList != null) {
-            // 此事件已经被注册了，可以直接发送
-            publish(event, eventObj);
-            return;
-        }
-        synchronized (mStickyEventList) {
-            ELogger.d("保存stickyEventList");
-            mStickyEventList.add(new StickyHolder(event, eventObj));
-        }
     }
 
     /**
