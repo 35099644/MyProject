@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Process;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
@@ -14,7 +13,6 @@ import android.util.Log;
 import com.llx278.exeventbus.ELogger;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 对ITransferLayer的具体实现
@@ -49,14 +47,14 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
 
     private void register() {
         ELogger.d("main", "register");
-        Intent routeIntent = new Intent(mContext, RouteService.class);
-        /*String pkg = "com.llx278.exeventbus";
+        //Intent routeIntent = new Intent(mContext, RouteService.class);
+        Intent routeIntent = new Intent("com.llx278.exeventbus.sync");
+        String pkg = "com.llx278.exeventbus";
         String cls = "com.llx278.exeventbus.remote.RouteService";
         ComponentName componentName = new ComponentName(pkg,cls);
         routeIntent.setComponent(componentName);
-        routeIntent.setAction("com.llx278.exeventbus.sync");*/
-
-        boolean b = mContext.bindService(routeIntent, mConnection, Context.BIND_AUTO_CREATE);
+        Log.d("main","packageName : " + mContext.getPackageName());
+        boolean b = mContext.getApplicationContext().bindService(routeIntent, mConnection, Context.BIND_AUTO_CREATE);
         ELogger.d("main", "bindresult : " + b);
     }
 

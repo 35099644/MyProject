@@ -222,7 +222,7 @@ public class ExEventBusTest {
 
         sExEventBus.register(this);
 
-        int count = 100000;
+        int count = 1000;
 
         sTest10.start(count);
         sTest11.start(count);

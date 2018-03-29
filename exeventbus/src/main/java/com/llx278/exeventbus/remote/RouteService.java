@@ -28,16 +28,6 @@ public class RouteService extends Service {
 
     private final ConcurrentHashMap<String,IReceiver> mReceiverMap = new ConcurrentHashMap<>();
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
