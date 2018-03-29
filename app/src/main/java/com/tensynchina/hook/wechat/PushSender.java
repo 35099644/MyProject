@@ -1,5 +1,6 @@
 package com.tensynchina.hook.wechat;
 
+import com.alibaba.fastjson.JSON;
 import com.llx278.exeventbus.ExEventBus;
 import com.llx278.exeventbus.exception.TimeoutException;
 import com.tensynchina.hook.common.Constant;
@@ -34,11 +35,11 @@ public class PushSender extends Thread {
                 String returnClassName = void.class.getName();
                 long timeout = 1000 * 10;
                 XLogger.d("准备向messageservice发送消息");
-                ExEventBus.getDefault().remotePublish(result, tag, returnClassName, timeout);
+                ExEventBus.getDefault().remotePublish(JSON.toJSONString(result), tag, returnClassName, timeout);
             } catch (InterruptedException e) {
                 XLogger.e(e);
                 break;
-            } catch (TimeoutException e) {
+            } catch (Exception e) {
                 XLogger.e(e);
             }
         }

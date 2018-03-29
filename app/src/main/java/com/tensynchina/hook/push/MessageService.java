@@ -14,6 +14,8 @@ import com.llx278.exeventbus.Type;
 import com.llx278.exeventbus.exception.TimeoutException;
 import com.orhanobut.logger.Logger;
 import com.tensynchina.hook.common.*;
+import com.tensynchina.hook.task.Error;
+import com.tensynchina.hook.task.Result;
 import com.tensynchina.hook.utils.IOUtils;
 import com.tensynchina.push.client.impl.AbstractPResponse;
 import com.tensynchina.push.client.impl.PClient;
@@ -39,13 +41,8 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     public void onCreate() {
         super.onCreate();
         Logger.d("MessageService onCreate");
-        new Thread(){
-            @Override
-            public void run() {
-                ExEventBus.create(MessageService.this);
-                ExEventBus.getDefault().register(MessageService.this);
-            }
-        }.start();
+        ExEventBus.create(MessageService.this);
+        ExEventBus.getDefault().register(MessageService.this);
 
 
         mReceiver = new Receiver();
@@ -159,6 +156,9 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
                         }
                     }.start();
                     break;
+                case "11":
+
+                    break;
                 default:
             }
 
@@ -171,12 +171,7 @@ public class MessageService extends Service implements PSReceiverWrapper.Timeout
     public void onDestroy() {
         super.onDestroy();
         Logger.d("MessageService onDestroy");
-        new Thread(){
-            @Override
-            public void run() {
-                ExEventBus.destroy();
-            }
-        }.start();
+        ExEventBus.destroy();
     }
 
     @Override
