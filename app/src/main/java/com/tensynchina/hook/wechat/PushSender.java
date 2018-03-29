@@ -33,6 +33,7 @@ public class PushSender extends Thread {
                 String tag = Constant.PUSH_MESSAGE_TAG;
                 String returnClassName = void.class.getName();
                 long timeout = 1000 * 10;
+                XLogger.d("准备向messageservice发送消息");
                 ExEventBus.getDefault().remotePublish(result, tag, returnClassName, timeout);
             } catch (InterruptedException e) {
                 XLogger.e(e);

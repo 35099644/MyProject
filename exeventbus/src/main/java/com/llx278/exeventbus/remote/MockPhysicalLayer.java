@@ -16,7 +16,6 @@ import java.util.ArrayList;
 
 /**
  * 对ITransferLayer的具体实现
- * 这里用广播来实现消息间的通信，因为只有广播能做到在动态注册.
  * Created by llx on 2018/2/28.
  */
 
@@ -46,16 +45,20 @@ public class MockPhysicalLayer implements IMockPhysicalLayer {
     }
 
     private void register() {
-        ELogger.d("main", "register");
-        //Intent routeIntent = new Intent(mContext, RouteService.class);
+        ELogger.d( "register");
         Intent routeIntent = new Intent("com.llx278.exeventbus.sync");
-        String pkg = "com.llx278.exeventbus";
+        String pkg = mContext.getPackageName();
         String cls = "com.llx278.exeventbus.remote.RouteService";
         ComponentName componentName = new ComponentName(pkg,cls);
         routeIntent.setComponent(componentName);
-        Log.d("main","packageName : " + mContext.getPackageName());
-        boolean b = mContext.getApplicationContext().bindService(routeIntent, mConnection, Context.BIND_AUTO_CREATE);
-        ELogger.d("main", "bindresult : " + b);
+        boolean success = mContext.getApplicationContext().bindService(routeIntent, mConnection, Context.BIND_AUTO_CREATE);
+        if (!success) {
+            ELogger.d("绑定服务失败，更换package为:com.tensynchina.hook");
+            pkg = "com.tensynchina.hook";
+            ComponentName newComponentName = new ComponentName(pkg,cls);
+            routeIntent.setComponent(newComponentName);
+            mContext.getApplicationContext().bindService(routeIntent, mConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     @Override
